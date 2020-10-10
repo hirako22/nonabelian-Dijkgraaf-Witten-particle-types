@@ -1,0 +1,221 @@
+import os
+import string
+
+s_3 = ["1", "r", "a", "aa", "ar", "aar"]
+
+# determines the element of any combination of a and r
+def parseElement(s3_string):
+  permuted = [1, 2, 3]
+  for letter in reversed(s3_string):
+    if letter == 'a':
+      permuted = [permuted[2], permuted[0], permuted[1]]
+    elif letter == 'r':
+      permuted = [permuted[1], permuted[0], permuted[2]]
+    elif letter == '1':
+      pass
+    else:
+      print("Invalid S_3 element: "+str(letter))
+      break
+  if permuted == [1, 2, 3]:
+    return "1"
+  elif permuted == [2, 1, 3]:
+    return "r"
+  elif permuted == [3, 1, 2]:
+    return "a"
+  elif permuted == [3, 2, 1]:
+    return "ar"
+  elif permuted == [2, 3, 1]:
+    return "aa"
+  else:
+    return "aar"
+
+# given an element of s_3 as a string, returns string of its inverse
+def inverse(element):
+  if element == "1":
+    return "1"
+  elif element == "r":
+    return "r"
+  elif element == "a":
+    return "aa"
+  elif element == "aa":
+    return "a"
+  elif element == "ar":
+    return "raa"
+  elif element == "aar":
+    return "ra"
+  else:
+    print(str(element)+" is not a suitable element to take inverse of.")
+    return "/"
+
+# given a string of generators (each char denotes a generator) and an array of
+# associated elements of s_3 under the proposed homomorphism (which is referred
+# to here as a CODE), creates a dictionary. Given an array of quotient strings, 
+# checks if the code gives a viable homomorphism.
+def checkQuotients(gens, code, qArray):
+  gen_list = gens.split(",")
+  code_list = code.split(",")
+  if len(gen_list) != len(code_list):
+    # this shouldn't come up
+    print("Code is not the same length as the generators.")
+    return False
+  dictionary = {}
+  for i in range(0,len(gen_list)):
+    dictionary.update({gen_list[i]: code_list[i]})
+  # checks if all the quotients work out
+  for quotient in qArray:
+    quotient_list = quotient.split(",")
+    translatedQuotient = ""
+    # write quotients in terms of elements of S_3
+    for q in quotient_list: # element in quotient
+      if q[-1] == '*':
+        translatedQuotient = translatedQuotient + inverse(dictionary[q[:-1]])
+      else:
+        translatedQuotient = translatedQuotient + dictionary[q]
+    if parseElement(translatedQuotient) != "1":
+      return False
+  return True
+
+
+# generates all associations of generators to S_3 elements mod conjugation
+def addHomomorphisms(code_set, prefix, k, genString, quotientArray):
+  if k == 0:
+    if checkQuotients(genString, prefix, quotientArray):
+      code_set.append(prefix)
+    return
+  for element in s_3:
+    newPrefix = prefix + "," + element
+    if prefix == "":
+      newPrefix = element
+    addHomomorphisms(code_set, newPrefix, k-1, genString, quotientArray)
+
+# given a tuple (python list) of elements of s_3 and an element of s_3,
+# returns the conjugated tuple by that element
+def conjugate(word, el):
+  word_list = word.split(",")
+  conjugated = []
+  for c in word_list:
+    conjugated.append(parseElement(el + c + inverse(el)))
+  return ",".join(conjugated)
+
+
+# given a set of codes and a new potential code, checks if the code is a
+# conjugate of any already present code. Returns True if the new code is a
+# conjugate, False otherwise
+def checkConjugate(codeSet, newCode):
+  if newCode in codeSet:
+    return False
+  for element in s_3[1:]:
+    conjugated = conjugate(newCode, element)
+    if conjugated in codeSet:
+        return True
+  return False
+
+def computeLBB(gens, code, l):
+  gen_list = gens.split(",")
+  code_list = code.split(",")
+  l_list = l.split(",")
+  if len(gen_list) != len(code_list):
+    # this shouldn't come up
+    print("Code is not the same length as the generators.")
+    return False
+  dictionary = {}
+  for i in range(0,len(gen_list)):
+    dictionary.update({gen_list[i]: code_list[i]})
+  # map l_bb word via homomorphism into S_3
+  l_s3 = ""
+  for l_letter in l_list:
+    if l_letter[-1] == '*':
+      l_s3 = l_s3 + inverse(dictionary[l_letter[:-1]])
+    else:
+      l_s3 = l_s3 + dictionary[l_letter]
+  return parseElement(l_s3)
+
+# given the image of the homomorphism of the pi_1(T^2), returns a list of the
+# elements of S_3 that commute with the two elements
+def computeCenter(m, l):
+  commuters = ["1"]
+  for element in s_3[1:]:
+    conjugate_m = parseElement(element + m + inverse(element))
+    conjugate_l = parseElement(element + l + inverse(element))
+    if conjugate_m == m and conjugate_l == l:
+      commuters.append(element)
+  return commuters
+
+# creates all of the viable homomorphisms from the given group to S_3, up to
+# conjugacy
+def particleTypes(generators, quotientsArray, lBB):
+  homomorphismSet = []
+  # create all associations of generators with elements in S_3
+  addHomomorphisms(homomorphismSet, "", len(generators.split(",")), generators, quotientsArray)
+  homModConjugation = {}
+  homCenter = {}
+  # compute l, mod out (m, l) set by conjugation
+  for codeCand in homomorphismSet:
+    blackboardMeridian = computeLBB(generators, codeCand, lBB)
+    pair = codeCand.split(",")[0] + "," + blackboardMeridian
+    if not checkConjugate(homModConjugation.values(), pair):
+      homModConjugation[codeCand] = pair
+      center = computeCenter(codeCand.split(",")[0], blackboardMeridian)
+      homCenter[pair] = center
+  particleTypes = set([])
+  # pair (m, l) with representations, take direct sums if need be
+  for hom in homModConjugation.keys():
+    pair = homModConjugation[hom]
+    if len(homCenter[pair]) > 1:
+      element = homCenter[pair][1]
+      homConjugated = conjugate(hom, element)
+      if homConjugated != hom:
+        if conjugate(homConjugated, element) == hom:
+          particleTypes.add("[("+pair+"), trivial] + [("+pair+"), sign]")
+        # the only two nontrivial proper subgroups of S_3 are Z_2 and Z_3
+        else:
+          particleTypes.add("[("+pair+"), trivial] + [("+pair+"), w] + [("+pair+"), w^2]")
+      # account for if the trivial subgroup is the center of (m, l)
+      else:
+        particleTypes.add("[("+pair+"), trivial]")
+    else: # if the center of the homomorphism is the trivial group
+      particleTypes.add("[("+pair+"), trivial]")
+  return particleTypes
+
+os.system('clear')
+print("\n")
+print("\t*************************************************************")
+print("\t**    S_3 Dijkgraaf-Witten particle types on a manifold    **")
+print("\t*************************************************************")
+print("\n")
+print("\t Input the generators fundamental group of your manifold:")
+print("\t Write the generators as one string, separated by a comma.")
+print("\t For example, if your group is <x1, x2| x1^3=x2^2=x1^(-1)x2=1>,")
+print("\t input the string as 'x1,x2' (without quotes). Not robust for")
+print("\t inputs differing from these instructions.")
+gens = input()
+print("\t Now input the quotients of the group presentation. Separate")
+print("\t the quotient words by a space. Denote the inverse of a")
+print("\t generator by adding a '*' to the end. For the above example,")
+print("\t the input would be 'x1,x1,x1 x2,x2 x1*,x2' (without quotes).")
+quotients = input()
+quotient_list = quotients.split(" ")
+print("\t Now input the word of the meridian using the conventions above.")
+lInput = input()
+
+os.system('clear')
+print("\t Calculating...")
+particles = particleTypes(gens, quotient_list, lInput)
+printQ = ""
+for q in quotient_list:
+  for el in q.split(","):
+    printQ = printQ + el
+  printQ = printQ + "="
+printQ = printQ + "1"
+
+os.system('clear')
+print("For the fundamental group")
+print("<"+gens+"|"+printQ+">,")
+print("the particle types are:")
+print("\n")
+
+for p in particles:
+  print("__________________________________________________________________")
+  print("|"+p)
+print("__________________________________________________________________")
+print("\n")
