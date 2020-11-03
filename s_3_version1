@@ -166,10 +166,10 @@ def particleTypes(generators, quotientsArray, lBB):
       homConjugated = conjugate(hom, element)
       if homConjugated != hom:
         if conjugate(homConjugated, element) == hom:
-          particleTypes.add("[("+pair+"), trivial] + [("+pair+"), sign]")
+          particleTypes.add("[("+pair+"), trivial]"+u'\u2295'+"[("+pair+"), sign]")
         # the only two nontrivial proper subgroups of S_3 are Z_2 and Z_3
         else:
-          particleTypes.add("[("+pair+"), trivial] + [("+pair+"), w] + [("+pair+"), w^2]")
+          particleTypes.add("[("+pair+"), trivial]"+u'\u2295'+"[("+pair+"), w]"+u'\u2295'+"[("+pair+"), w^2]")
       # account for if the trivial subgroup is the center of (m, l)
       else:
         particleTypes.add("[("+pair+"), trivial]")
