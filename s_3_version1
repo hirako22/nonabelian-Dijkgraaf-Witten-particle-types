@@ -145,9 +145,9 @@ def findS_3Subgroup(torus, homomorphism, centerOfTorus, particleSet):
   if size == 1:
     particleSet.add("[("+torus+"), trivial]")
   elif size == 2:
-    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), sign]")
+    particleSet.add("[("+torus+"), trivial] "+u'\u2295'+" [("+torus+"), sign]")
   else: #(size == 3)
-    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), w]"+u'\u2295'+"[("+torus+"), w^2]")
+    particleSet.add("[("+torus+"), trivial] "+u'\u2295'+" [("+torus+"), w] "+u'\u2295'+" [("+torus+"), w^2]")
   return
 
 
