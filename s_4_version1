@@ -194,18 +194,18 @@ def findS_4Subgroup(torus, homomorphism, centerOfTorus, particleSet):
   if size == 1:
     particleSet.add("[("+torus+"), trivial]")
   elif size == 2:
-    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), sign]")
+    particleSet.add("[("+torus+"), trivial] "+u'\u2295'+" [("+torus+"), sign]")
   elif size == 3:
-    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), w]"+u'\u2295'+"[("+torus+"), w^2]")
+    particleSet.add("[("+torus+"), trivial] "+u'\u2295'+" [("+torus+"), w] "+u'\u2295'+" [("+torus+"), w^2]")
   elif size == 8:
-    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), r^2]"+u'\u2295'+"[("+torus+"), r]"
-    +u'\u2295'+"[("+torus+"), r]"+u'\u2295'+"[("+torus+"), s]"+u'\u2295'+"[("+torus+"), rs]")
+    particleSet.add("[("+torus+"), trivial] "+u'\u2295'+" [("+torus+"), r^2] "+u'\u2295'+" [("+torus+"), r] "
+    +u'\u2295'+" [("+torus+"), r] "+u'\u2295'+" [("+torus+"), s] "+u'\u2295'+" [("+torus+"), rs]")
   elif size == 4: # must distinguish between z_4 and Klein
     if z_2 == 3:
-      particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), (1, -1)]")
+      particleSet.add("[("+torus+"), trivial] "+u'\u2295'+" [("+torus+"), (1, -1)]")
     else:
-      particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), w]"+u'\u2295'+"[("+torus+"), w^2]"
-      +u'\u2295'+"[("+torus+"), w^3]")
+      particleSet.add("[("+torus+"), trivial] "+u'\u2295'+" [("+torus+"), w] "+u'\u2295'+" [("+torus+"), w^2] "
+      +u'\u2295'+" [("+torus+"), w^3]")
   return
 
 
