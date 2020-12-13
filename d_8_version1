@@ -1,7 +1,7 @@
 import os
 import string
 
-d_4 = ["1", "r", "a", "aa", "aaa", "ra", "raa", "raaa"]
+d_8 = ["1", "r", "a", "aa", "aaa", "ra", "raa", "raaa"]
 
 def parseElement(d4_string):
   permuted = [1, 2, 3, 4]
@@ -13,7 +13,7 @@ def parseElement(d4_string):
     elif letter == '1':
       pass
     else:
-      print("Invalid D_4 element: "+str(letter))
+      print("Invalid D_8 element: "+str(letter))
       break
   if permuted == [1, 2, 3, 4]:
     return "1"
@@ -32,26 +32,17 @@ def parseElement(d4_string):
   else:
     return "raaa"
 
-def inverse(element):
-  if element == "1":
-    return "1"
-  elif element == "r":
-    return "r"
-  elif element == "a":
-    return "aaa"
-  elif element == "aa":
-    return "aa"
-  elif element == "aaa":
-    return "a"
-  elif element == "ra":
-    return "ra"
-  elif element == "raa":
-    return "raa"
-  elif element == "raaa":
-    return "raaa"
-  else:
-    print(str(element)+" is not a suitable element to take inverse of.")
-    return "/"
+inverse = {
+    "1": "1",
+    "r": "r",
+    "a": "aaa",
+    "aa": "aa",
+    "aaa": "a",
+    "ra": "ra",
+    "raa": "raa",
+    "raaa": "raaa"
+}
+
 
 def checkQuotients(gens, code, qArray):
   gen_list = gens.split(",")
@@ -67,42 +58,46 @@ def checkQuotients(gens, code, qArray):
   for quotient in qArray:
     quotient_list = quotient.split(",")
     translatedQuotient = ""
-    # write quotients in terms of elements of D_4
+    # write quotients in terms of elements of D_8
     for q in quotient_list: # element in quotient
       if q[-1] == '*':
-        translatedQuotient = translatedQuotient + inverse(dictionary[q[:-1]])
+        translatedQuotient = translatedQuotient + inverse[dictionary[q[:-1]]]
       else:
         translatedQuotient = translatedQuotient + dictionary[q]
     if parseElement(translatedQuotient) != "1":
       return False
   return True
 
+
 def addHomomorphisms(code_set, prefix, k, genString, quotientArray):
   if k == 0:
     if checkQuotients(genString, prefix, quotientArray):
       code_set.append(prefix)
     return
-  for element in d_4:
+  for element in d_8:
     newPrefix = prefix + "," + element
     if prefix == "":
       newPrefix = element
     addHomomorphisms(code_set, newPrefix, k-1, genString, quotientArray)
 
+
 def conjugate(word, el):
   word_list = word.split(",")
   conjugated = []
   for c in word_list:
-    conjugated.append(parseElement(el + c + inverse(el)))
+    conjugated.append(parseElement(el + c + inverse[el]))
   return ",".join(conjugated)
+
 
 def checkConjugate(codeSet, newCode):
   if newCode in codeSet:
     return False
-  for element in d_4[1:]:
+  for element in d_8[1:]:
     conjugated = conjugate(newCode, element)
     if conjugated in codeSet:
         return True
   return False
+
 
 def computeLBB(gens, code, l):
   gen_list = gens.split(",")
@@ -115,23 +110,54 @@ def computeLBB(gens, code, l):
   dictionary = {}
   for i in range(0,len(gen_list)):
     dictionary.update({gen_list[i]: code_list[i]})
-  # map l_bb word via homomorphism into d_4
-  l_d4 = ""
+  # map l_bb word via homomorphism into d_8
+  l_d8 = ""
   for l_letter in l_list:
     if l_letter[-1] == '*':
-      l_d4 = l_d4 + inverse(dictionary[l_letter[:-1]])
+      l_d8 = l_d8 + inverse[dictionary[l_letter[:-1]]]
     else:
-      l_d4 = l_d4 + dictionary[l_letter]
-  return parseElement(l_d4)
+      l_d8 = l_d8 + dictionary[l_letter]
+  return parseElement(l_d8)
+
 
 def computeCenter(m, l):
   commuters = ["1"]
-  for element in d_4[1:]:
-    conjugate_m = parseElement(element + m + inverse(element))
-    conjugate_l = parseElement(element + l + inverse(element))
+  for element in d_8[1:]:
+    conjugate_m = parseElement(element + m + inverse[element])
+    conjugate_l = parseElement(element + l + inverse[element])
     if conjugate_m == m and conjugate_l == l:
       commuters.append(element)
   return commuters
+
+
+def findD_8Subgroup(torus, homomorphism, centerOfTorus, particleSet):
+  conjugations = {homomorphism} #set of unique homomorphisms under conjugation by the center of the pair
+  z_2 = 0 #for tracking the number of order 2 elements under conjugation
+  for element in centerOfTorus:
+    conjugated = conjugate(homomorphism, element)
+    if not conjugated in conjugations:
+      conjugations.add(conjugated)
+    if conjugated != homomorphism and conjugate(conjugated, element) == homomorphism:
+      z_2 += 1
+  size = len(conjugations)
+  # possible centralizers: 1, z_2, z_4, Klein, D_8
+  if size == 1:
+    particleSet.add("[("+torus+"), trivial]")
+  elif size == 2:
+    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), sign]")
+  elif size == 3:
+    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), w]"+u'\u2295'+"[("+torus+"), w^2]")
+  elif size == 8:
+    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), r^2]"+u'\u2295'+"[("+torus+"), r]"
+    +u'\u2295'+"[("+torus+"), r]"+u'\u2295'+"[("+torus+"), s]"+u'\u2295'+"[("+torus+"), rs]")
+  elif size == 4: # must distinguish between z_4 and Klein
+    if z_2 == 3:
+      particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), (1, -1)]")
+    else:
+      particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), w]"+u'\u2295'+"[("+torus+"), w^2]"
+      +u'\u2295'+"[("+torus+"), w^3]")
+  return
+
 
 def particleTypes(generators, quotientsArray, lBB):
   homomorphismSet = []
@@ -151,32 +177,15 @@ def particleTypes(generators, quotientsArray, lBB):
   # pair (m, l) with representations, take direct sums if need be
   for hom in homModConjugation.keys():
     pair = homModConjugation[hom]
-    if len(homCenter[pair]) > 1:
-      element = homCenter[pair][1]
-      homConjugated = conjugate(hom, element)
-      # the only nontrivial proper subgroups of d_4 are Z_2, Z_4, and the Klein 4-group
-      if homConjugated != hom:
-        # Z_2
-        if conjugate(homConjugated, element) == hom and len(homCenter[pair]) == 2:
-          particleTypes.add("[("+pair+"), trivial]"+u'\u2295'+"[("+pair+"), sign]")
-        # Klein
-        elif conjugate(homConjugated, element) == hom and len(homCenter[pair]) == 4:
-          particleTypes.add("[("+pair+"), trivial]"+u'\u2295'+"[("+pair+"), (1, -1)]")
-        # Z_4
-        else:
-          particleTypes.add("[("+pair+"), trivial]"+u'\u2295'+"[("+pair+"), w]"+u'\u2295'+"[("+pair+"), w^2]"+u'\u2295'+"[("+pair+"), w^3]")
-      # account for if the trivial subgroup is the center of (m, l)
-      else:
-        particleTypes.add("[("+pair+"), trivial]")
-    else: # if the center of the homomorphism is the trivial group
-      particleTypes.add("[("+pair+"), trivial]")
+    pairCenter = homCenter[pair]
+    findD_8Subgroup(pair, hom, pairCenter, particleTypes)
   return particleTypes
 
 os.system('clear')
 print("\n")
-print("\t*************************************************************")
-print("\t**    D_4 Dijkgraaf-Witten particle types on a manifold    **")
-print("\t*************************************************************")
+print("\t****************************************************************")
+print("\t**  D_8 Dijkgraaf-Witten particle types on a knot complement  **")
+print("\t****************************************************************")
 print("\n")
 print("\t Input the generators fundamental group of your manifold:")
 print("\t Write the generators as one string, separated by a comma.")
