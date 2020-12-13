@@ -1,0 +1,275 @@
+import os
+import string
+
+s_4 = ["1", "a", "b", "c", "ab", "ac", "ba", "bb", "cb", "cc", "aba", "abb", "acb", "acc", "bac", "cba", "cbb", "acba", "acbb", "babb", "abac", "cbac", "ababb", "acbac"]
+
+def parseElement(s4_string):
+  permuted = [1, 2, 3, 4]
+  for letter in reversed(s4_string):
+    if letter == 'a':
+      permuted = [permuted[0], permuted[1], permuted[3], permuted[2]]
+    elif letter == 'b':
+      permuted = [permuted[1], permuted[2], permuted[0], permuted[3]]
+    elif letter == 'c':
+      permuted = [permuted[3], permuted[0], permuted[1], permuted[2]]
+    elif letter == '1':
+      pass
+    else:
+      print("Invalid S_4 element: "+str(letter))
+      break
+  if permuted == [1, 2, 3, 4]:
+    return "1"
+  elif permuted == [1, 2, 4, 3]:
+    return "a"
+  elif permuted == [1, 3, 2, 4]:
+    return "abac"
+  elif permuted == [1, 3, 4, 2]:
+    return "bac"
+  elif permuted == [1, 4, 2, 3]:
+    return "ababb"
+  elif permuted == [1, 4, 3, 2]:
+    return "babb"
+  elif permuted == [2, 1, 4, 3]:
+    return "acbac"
+  elif permuted == [2, 1, 3, 4]:
+    return "cbac"
+  elif permuted == [2, 3, 1, 4]:
+    return "b"
+  elif permuted == [2, 3, 4, 1]:
+    return "ab"
+  elif permuted == [2, 4, 1, 3]:
+    return "ba"
+  elif permuted == [2, 4, 3, 1]:
+    return "aba"
+  elif permuted == [3, 1, 2, 4]:
+    return "bb"
+  elif permuted == [3, 1, 4, 2]:
+    return "abb"
+  elif permuted == [3, 2, 1, 4]:
+    return "acba"
+  elif permuted == [3, 2, 4, 1]:
+    return "cba"
+  elif permuted == [3, 4, 1, 2]:
+    return "cc"
+  elif permuted == [3, 4, 2, 1]:
+    return "acc"
+  elif permuted == [4, 1, 2, 3]:
+    return "c"
+  elif permuted == [4, 1, 3, 2]:
+    return "ac"
+  elif permuted == [4, 2, 1, 3]:
+    return "acb"
+  elif permuted == [4, 2, 3, 1]:
+    return "cb"
+  elif permuted == [4, 3, 1, 2]:
+    return "cbb"
+  else: # permuted == [4, 3, 2, 1]:
+    return "acbb"
+
+inverse = {
+    "1": "1",
+    "a": "a", #(34)
+    "b": "bb",
+    "bb": "b",
+    "c": "ab",
+    "ab": "c",
+    "ac": "aba",
+    "aba": "ac",
+    "ba": "abb",
+    "abb": "ba",
+    "cb": "cb", #(14)
+    "cc": "cc",
+    "acb": "cba",
+    "cba": "acb",
+    "acc": "cbb",
+    "cbb": "acc",
+    "bac": "ababb",
+    "ababb": "bac",
+    "acba": "acba", #(13)
+    "acbb": "acbb",
+    "babb": "babb", #(24)
+    "abac": "abac", #(23)
+    "cbac": "cbac", #(12)
+    "acbac": "acbac"
+}
+
+
+def checkQuotients(gens, code, qArray):
+  gen_list = gens.split(",")
+  code_list = code.split(",")
+  if len(gen_list) != len(code_list):
+    # this shouldn't come up
+    print("Code is not the same length as the generators.")
+    return False
+  dictionary = {}
+  for i in range(0,len(gen_list)):
+    dictionary.update({gen_list[i]: code_list[i]})
+  # checks if all the quotients work out
+  for quotient in qArray:
+    quotient_list = quotient.split(",")
+    translatedQuotient = ""
+    # write quotients in terms of elements of S_4
+    for q in quotient_list: # element in quotient
+      if q[-1] == '*':
+        translatedQuotient = translatedQuotient + inverse[dictionary[q[:-1]]]
+      else:
+        translatedQuotient = translatedQuotient + dictionary[q]
+    if parseElement(translatedQuotient) != "1":
+      return False
+  return True
+
+
+def addHomomorphisms(code_set, prefix, k, genString, quotientArray):
+  if k == 0:
+    if checkQuotients(genString, prefix, quotientArray):
+      code_set.append(prefix)
+    return
+  for element in s_4:
+    newPrefix = prefix + "," + element
+    if prefix == "":
+      newPrefix = element
+    addHomomorphisms(code_set, newPrefix, k-1, genString, quotientArray)
+
+
+def conjugate(word, el):
+  word_list = word.split(",")
+  conjugated = []
+  for c in word_list:
+    conjugated.append(parseElement(el + c + inverse[el]))
+  return ",".join(conjugated)
+
+
+def checkConjugate(codeSet, newCode):
+  if newCode in codeSet:
+    return False
+  for element in s_4[1:]:
+    conjugated = conjugate(newCode, element)
+    if conjugated in codeSet:
+        return True
+  return False
+
+
+def computeLBB(gens, code, l):
+  gen_list = gens.split(",")
+  code_list = code.split(",")
+  l_list = l.split(",")
+  if len(gen_list) != len(code_list):
+    # this shouldn't come up
+    print("Code is not the same length as the generators.")
+    return False
+  dictionary = {}
+  for i in range(0,len(gen_list)):
+    dictionary.update({gen_list[i]: code_list[i]})
+  # map l_bb word via homomorphism into d_4
+  l_s4 = ""
+  for l_letter in l_list:
+    if l_letter[-1] == '*':
+      l_s4 = l_s4 + inverse[dictionary[l_letter[:-1]]]
+    else:
+      l_s4 = l_s4 + dictionary[l_letter]
+  return parseElement(l_s4)
+
+
+def computeCenter(m, l):
+  commuters = ["1"]
+  for element in s_4[1:]:
+    conjugate_m = parseElement(element + m + inverse[element])
+    conjugate_l = parseElement(element + l + inverse[element])
+    if conjugate_m == m and conjugate_l == l:
+      commuters.append(element)
+  return commuters
+
+
+def findS_4Subgroup(torus, homomorphism, centerOfTorus, particleSet):
+  conjugations = {homomorphism} #set of unique homomorphisms under conjugation by the center of the pair
+  z_2 = 0 #for tracking the number of order 2 elements under conjugation
+  for element in centerOfTorus:
+    conjugated = conjugate(homomorphism, element)
+    if not conjugated in conjugations:
+      conjugations.add(conjugated)
+    if conjugated != homomorphism and conjugate(conjugated, element) == homomorphism:
+      z_2 += 1
+  size = len(conjugations)
+  # possible centralizers: 1, z_2, z_3, z_4, Klein, d_8
+  if size == 1:
+    particleSet.add("[("+torus+"), trivial]")
+  elif size == 2:
+    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), sign]")
+  elif size == 3:
+    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), w]"+u'\u2295'+"[("+torus+"), w^2]")
+  elif size == 8:
+    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), r^2]"+u'\u2295'+"[("+torus+"), r]"
+    +u'\u2295'+"[("+torus+"), r]"+u'\u2295'+"[("+torus+"), s]"+u'\u2295'+"[("+torus+"), rs]")
+  elif size == 4: # must distinguish between z_4 and Klein
+    if z_2 == 3:
+      particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), (1, -1)]")
+    else:
+      particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), w]"+u'\u2295'+"[("+torus+"), w^2]"
+      +u'\u2295'+"[("+torus+"), w^3]")
+  return
+
+
+def particleTypes(generators, quotientsArray, lBB):
+  homomorphismSet = []
+  # create all associations of generators with elements in d_4
+  addHomomorphisms(homomorphismSet, "", len(generators.split(",")), generators, quotientsArray)
+  homModConjugation = {} # given elements associated to generators modulo conjugation, give (m, l)
+  homCenter = {} # given a (m, l), compute its center
+  # compute l, mod out (m, l) set by conjugation
+  for codeCand in homomorphismSet:
+    blackboardMeridian = computeLBB(generators, codeCand, lBB)
+    pair = codeCand.split(",")[0] + "," + blackboardMeridian
+    if not checkConjugate(homModConjugation.values(), pair):
+      homModConjugation[codeCand] = pair
+      center = computeCenter(codeCand.split(",")[0], blackboardMeridian)
+      homCenter[pair] = center
+  particleTypes = set([])
+  # pair (m, l) with representations, take direct sums if need be
+  for hom in homModConjugation.keys():
+    pair = homModConjugation[hom]
+    pairCenter = homCenter[pair]
+    findS_4Subgroup(pair, hom, pairCenter, particleTypes)
+  return particleTypes
+
+os.system('clear')
+print("\n")
+print("\t****************************************************************")
+print("\t**  S_4 Dijkgraaf-Witten particle types on a knot complement  **")
+print("\t****************************************************************")
+print("\n")
+print("\t Input the generators fundamental group of your manifold:")
+print("\t Write the generators as one string, separated by a comma.")
+print("\t For example, if your group is <x1, x2| x1^3=x2^2=x1^(-1)x2=1>,")
+print("\t input the string as 'x1,x2' (without quotes). Not robust for")
+print("\t inputs differing from these instructions.")
+gens = input()
+print("\t Now input the quotients of the group presentation. Separate")
+print("\t the quotient words by a space. Denote the inverse of a")
+print("\t generator by adding a '*' to the end. For the above example,")
+print("\t the input would be 'x1,x1,x1 x2,x2 x1*,x2' (without quotes).")
+quotients = input()
+quotient_list = quotients.split(" ")
+print("\t Now input the word of the meridian using the conventions above.")
+lInput = input()
+
+os.system('clear')
+print("\t Calculating...")
+particles = particleTypes(gens, quotient_list, lInput)
+printQ = ""
+for q in quotient_list:
+  for el in q.split(","):
+    printQ = printQ + el
+  printQ = printQ + "="
+printQ = printQ + "1"
+
+os.system('clear')
+print("For the fundamental group")
+print("<"+gens+"|"+printQ+">,")
+print("the particle types are:")
+print("\n")
+
+for p in particles:
+  print("__________________________________________________________________")
+  print("|"+p)
+print("__________________________________________________________________")
+print("\n")
