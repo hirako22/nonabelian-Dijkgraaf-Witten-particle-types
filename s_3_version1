@@ -30,22 +30,14 @@ def parseElement(s3_string):
     return "aar"
 
 # given an element of s_3 as a string, returns string of its inverse
-def inverse(element):
-  if element == "1":
-    return "1"
-  elif element == "r":
-    return "r"
-  elif element == "a":
-    return "aa"
-  elif element == "aa":
-    return "a"
-  elif element == "ar":
-    return "raa"
-  elif element == "aar":
-    return "ra"
-  else:
-    print(str(element)+" is not a suitable element to take inverse of.")
-    return "/"
+inverse = {
+    "1": "1",
+    "r": "r",
+    "a": "aa",
+    "aa": "a",
+    "ar": "raa",
+    "aar": "ra"
+}
 
 # given a string of generators (each char denotes a generator) and an array of
 # associated elements of s_3 under the proposed homomorphism (which is referred
@@ -68,7 +60,7 @@ def checkQuotients(gens, code, qArray):
     # write quotients in terms of elements of S_3
     for q in quotient_list: # element in quotient
       if q[-1] == '*':
-        translatedQuotient = translatedQuotient + inverse(dictionary[q[:-1]])
+        translatedQuotient = translatedQuotient + inverse[dictionary[q[:-1]]]
       else:
         translatedQuotient = translatedQuotient + dictionary[q]
     if parseElement(translatedQuotient) != "1":
@@ -94,7 +86,7 @@ def conjugate(word, el):
   word_list = word.split(",")
   conjugated = []
   for c in word_list:
-    conjugated.append(parseElement(el + c + inverse(el)))
+    conjugated.append(parseElement(el + c + inverse[el]))
   return ",".join(conjugated)
 
 
@@ -125,7 +117,7 @@ def computeLBB(gens, code, l):
   l_s3 = ""
   for l_letter in l_list:
     if l_letter[-1] == '*':
-      l_s3 = l_s3 + inverse(dictionary[l_letter[:-1]])
+      l_s3 = l_s3 + inverse[dictionary[l_letter[:-1]]]
     else:
       l_s3 = l_s3 + dictionary[l_letter]
   return parseElement(l_s3)
@@ -135,14 +127,30 @@ def computeLBB(gens, code, l):
 def computeCenter(m, l):
   commuters = ["1"]
   for element in s_3[1:]:
-    conjugate_m = parseElement(element + m + inverse(element))
-    conjugate_l = parseElement(element + l + inverse(element))
+    conjugate_m = parseElement(element + m + inverse[element])
+    conjugate_l = parseElement(element + l + inverse[element])
     if conjugate_m == m and conjugate_l == l:
       commuters.append(element)
   return commuters
 
-# creates all of the viable homomorphisms from the given group to S_3, up to
-# conjugacy
+
+def findS_3Subgroup(torus, homomorphism, centerOfTorus, particleSet):
+  conjugations = {homomorphism} #set of unique homomorphisms under conjugation by the center of the pair
+  for element in centerOfTorus:
+    conjugated = conjugate(homomorphism, element)
+    if not conjugated in conjugations:
+      conjugations.add(conjugated)
+  size = len(conjugations)
+  # possible centralizers: 1, z_2, z_3
+  if size == 1:
+    particleSet.add("[("+torus+"), trivial]")
+  elif size == 2:
+    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), sign]")
+  else: #(size == 3)
+    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), w]"+u'\u2295'+"[("+torus+"), w^2]")
+  return
+
+
 def particleTypes(generators, quotientsArray, lBB):
   homomorphismSet = []
   # create all associations of generators with elements in S_3
@@ -159,29 +167,18 @@ def particleTypes(generators, quotientsArray, lBB):
       homCenter[pair] = center
   particleTypes = set([])
   # pair (m, l) with representations, take direct sums if need be
+  # the only subgroups of S_3 are Z_2 and Z_3
   for hom in homModConjugation.keys():
     pair = homModConjugation[hom]
-    if len(homCenter[pair]) > 1:
-      element = homCenter[pair][1]
-      homConjugated = conjugate(hom, element)
-      if homConjugated != hom:
-        if conjugate(homConjugated, element) == hom:
-          particleTypes.add("[("+pair+"), trivial]"+u'\u2295'+"[("+pair+"), sign]")
-        # the only two nontrivial proper subgroups of S_3 are Z_2 and Z_3
-        else:
-          particleTypes.add("[("+pair+"), trivial]"+u'\u2295'+"[("+pair+"), w]"+u'\u2295'+"[("+pair+"), w^2]")
-      # account for if the trivial subgroup is the center of (m, l)
-      else:
-        particleTypes.add("[("+pair+"), trivial]")
-    else: # if the center of the homomorphism is the trivial group
-      particleTypes.add("[("+pair+"), trivial]")
+    pairCenter = homCenter[pair]
+    findS_3Subgroup(pair, hom, pairCenter, particleTypes)
   return particleTypes
 
 os.system('clear')
 print("\n")
-print("\t*************************************************************")
-print("\t**    S_3 Dijkgraaf-Witten particle types on a manifold    **")
-print("\t*************************************************************")
+print("\t****************************************************************")
+print("\t**  S_3 Dijkgraaf-Witten particle types on a knot complement  **")
+print("\t****************************************************************")
 print("\n")
 print("\t Input the generators fundamental group of your manifold:")
 print("\t Write the generators as one string, separated by a comma.")
