@@ -1,0 +1,391 @@
+import os
+import string
+
+d_8 = ["1", "r", "a", "aa", "aaa", "ra", "raa", "raaa"]
+
+conjugacyClassesD8 = "1 r,raa a,aaa aa ra,raaa"
+
+def parseElement(d4_string):
+  permuted = [1, 2, 3, 4]
+  for letter in reversed(d4_string):
+    if letter == 'a':
+      permuted = [permuted[3], permuted[0], permuted[1], permuted[2]]
+    elif letter == 'r':
+      permuted = [permuted[1], permuted[0], permuted[3], permuted[2]]
+    elif letter == '1':
+      pass
+    else:
+      print("Invalid D_8 element: "+str(letter))
+      break
+  if permuted == [1, 2, 3, 4]:
+    return "1"
+  elif permuted == [2, 1, 4, 3]:
+    return "r"
+  elif permuted == [4, 1, 2, 3]:
+    return "a"
+  elif permuted == [3, 4, 1, 2]:
+    return "aa"
+  elif permuted == [2, 3, 4, 1]:
+    return "aaa"
+  elif permuted == [1, 4, 3, 2]:
+    return "ra"
+  elif permuted == [4, 3, 2, 1]:
+    return "raa"
+  else:
+    return "raaa"
+
+inverse = {
+    "1": "1",
+    "r": "r",
+    "a": "aaa",
+    "aa": "aa",
+    "aaa": "a",
+    "ra": "ra",
+    "raa": "raa",
+    "raaa": "raaa"
+}
+
+
+def checkQuotients(gens, code, qArray):
+  gen_list = gens.split(",")
+  code_list = code.split(",")
+  if len(gen_list) != len(code_list):
+    # this shouldn't come up
+    print("Code is not the same length as the generators.")
+    return False
+  dictionary = {}
+  for i in range(0,len(gen_list)):
+    dictionary.update({gen_list[i]: code_list[i]})
+  # checks if all the quotients work out
+  for quotient in qArray:
+    quotient_list = quotient.split(",")
+    translatedQuotient = ""
+    # write quotients in terms of elements of D_8
+    for q in quotient_list: # element in quotient
+      if q[-1] == '*':
+        translatedQuotient = translatedQuotient + inverse[dictionary[q[:-1]]]
+      else:
+        translatedQuotient = translatedQuotient + dictionary[q]
+    if parseElement(translatedQuotient) != "1":
+      return False
+  return True
+
+
+def addHomomorphisms(code_set, prefix, k, genString, quotientArray):
+  if k == 0:
+    if checkQuotients(genString, prefix, quotientArray):
+      code_set.append(prefix)
+    return
+  for element in d_8:
+    newPrefix = prefix + "," + element
+    if prefix == "":
+      newPrefix = element
+    addHomomorphisms(code_set, newPrefix, k-1, genString, quotientArray)
+
+
+def conjugate(word, el):
+  word_list = word.split(",")
+  conjugated = []
+  for c in word_list:
+    conjugated.append(parseElement(el + c + inverse[el]))
+  return ",".join(conjugated)
+
+
+def addHomomorphisms(code_set, prefix, k, genString, quotientArray, setOfElements):
+  if k == 0:
+    if checkQuotients(genString, prefix, quotientArray):
+      code_set.append(prefix)
+    return
+  for element in setOfElements:
+    newPrefix = prefix + "," + element
+    if prefix == "":
+      newPrefix = element
+    addHomomorphisms(code_set, newPrefix, k-1, genString, quotientArray, setOfElements)
+
+
+def addHomomorphismsWirtinger(code_set, prefix, k, indNum, gString, qList, simplifyList, setOfElements):
+  if k == 0:
+    for i in range(len(gString)-indNum):
+      prefix.append(conjugate(prefix[-1],prefix[index(simplifyList[i])]))
+    if checkQuotientsWirtinger(prefix, qList):
+      code_set.append(",".join(prefix))
+    return
+  for element in setOfElements:
+    if prefix == []:
+      prefix = [element]
+    else:
+      prefix.append(element)
+    addHomomorphismsWirtinger(code_set, prefix, k-1, indNum, gString, qList, simplifyList, setOfElements)
+    prefix = prefix[:-1]
+
+
+def simplifyWirtinger(code_set, generators, quotientList):
+  conjugacyClassesList = conjugacyClassesD8.split(" ")
+  # since all generators in a Wirtinger presentation are related by conjugations,
+  # we select our maps from conjugacy classes in d_8
+  gs = generators.split(",")
+  length = len(gs)
+  sList = []
+  for q in reversed(quotientList):
+    rel = q.split(",")
+    if index(rel[1]) > length:
+      break
+    length -= 1
+    if sList == []:
+      sList = [rel[1]]
+    else:
+      sList.append(rel[1])
+  sList = [e for e in reversed(sList)]
+  for cClass in conjugacyClassesList:
+    addHomomorphismsWirtinger(code_set, [], length, length, gs, quotientList, sList, cClass.split(","))
+
+
+def checkConjugate(codeSet, newCode):
+  if newCode in codeSet:
+    return False
+  for element in d_8[1:]:
+    conjugated = conjugate(newCode, element)
+    if conjugated in codeSet:
+        return True
+  return False
+
+
+def computeLBB(gens, code, l):
+  gen_list = gens.split(",")
+  code_list = code.split(",")
+  l_list = l.split(",")
+  if len(gen_list) != len(code_list):
+    # this shouldn't come up
+    print("Code is not the same length as the generators.")
+    return False
+  dictionary = {}
+  for i in range(0,len(gen_list)):
+    dictionary.update({gen_list[i]: code_list[i]})
+  # map l_bb word via homomorphism into d_8
+  l_d8 = ""
+  for l_letter in l_list:
+    if l_letter[-1] == '*':
+      l_d8 = l_d8 + inverse[dictionary[l_letter[:-1]]]
+    else:
+      l_d8 = l_d8 + dictionary[l_letter]
+  return parseElement(l_d8)
+
+
+def computeCenter(m, l):
+  commuters = ["1"]
+  for element in d_8[1:]:
+    conjugate_m = parseElement(element + m + inverse[element])
+    conjugate_l = parseElement(element + l + inverse[element])
+    if conjugate_m == m and conjugate_l == l:
+      commuters.append(element)
+  return commuters
+
+
+def findD_8Subgroup(torus, homomorphism, centerOfTorus, particleSet):
+  conjugations = {homomorphism} #set of unique homomorphisms under conjugation by the center of the pair
+  z_2 = 0 #for tracking the number of order 2 elements under conjugation
+  for element in centerOfTorus:
+    conjugated = conjugate(homomorphism, element)
+    if not conjugated in conjugations:
+      conjugations.add(conjugated)
+    if conjugated != homomorphism and conjugate(conjugated, element) == homomorphism:
+      z_2 += 1
+  size = len(conjugations)
+  # possible centralizers: 1, z_2, z_4, Klein, D_8
+  if size == 1:
+    particleSet.add("[("+torus+"), trivial]")
+  elif size == 2:
+    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), sign]")
+  elif size == 3:
+    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), w]"+u'\u2295'+"[("+torus+"), w^2]")
+  elif size == 8:
+    particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), r^2]"+u'\u2295'+"[("+torus+"), r]"
+    +u'\u2295'+"[("+torus+"), r]"+u'\u2295'+"[("+torus+"), s]"+u'\u2295'+"[("+torus+"), rs]")
+  elif size == 4: # must distinguish between z_4 and Klein
+    if z_2 == 3:
+      particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), (1, -1)]")
+    else:
+      particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), w]"+u'\u2295'+"[("+torus+"), w^2]"
+      +u'\u2295'+"[("+torus+"), w^3]")
+  return
+
+
+def particleTypes(generators, quotientsArray, lBB, wirtinger):
+  homomorphismSet = []
+  # create all associations of generators with elements in d_4
+  if wirtinger:
+    simplifyWirtinger(homomorphismSet, generators, quotientsArray)
+  else:
+    addHomomorphisms(homomorphismSet, "", len(generators.split(",")), generators, quotientsArray, d_8)
+  homModConjugation = {}
+  homCenter = {}
+  # compute l, mod out (m, l) set by conjugation
+  for codeCand in homomorphismSet:
+    blackboardMeridian = computeLBB(generators, codeCand, lBB)
+    pair = codeCand.split(",")[0] + "," + blackboardMeridian
+    if not checkConjugate(homModConjugation.values(), pair):
+      homModConjugation[codeCand] = pair
+      center = computeCenter(codeCand.split(",")[0], blackboardMeridian)
+      homCenter[pair] = center
+  particleTypes = set([])
+  # pair (m, l) with representations, take direct sums if need be
+  for hom in homModConjugation.keys():
+    pair = homModConjugation[hom]
+    pairCenter = homCenter[pair]
+    findD_8Subgroup(pair, hom, pairCenter, particleTypes)
+  return particleTypes
+
+
+def knot_group_from_gauss(gauss_code_string):
+  # creates list of ints from the string input of the gauss code
+  gauss_code = [int(i) for i in gauss_code_string.strip().split(',')]
+  arcs = {} # dictionary - keys are the positive ints, values are subsequences
+  arc_subsequence = []
+  positive_crossings_in_arc = []
+  list_of_arcs = []
+  i = 0
+
+  # if the first number is positive
+  if gauss_code[i] > 0:
+    while gauss_code[i] > 0:
+      arc_subsequence.append(gauss_code[i])
+      positive_crossings_in_arc.append(gauss_code[i])
+      i -= 1
+    arc_subsequence.append(gauss_code[i])
+    arc_subsequence.reverse()
+  else:
+    arc_subsequence.append(gauss_code[i])
+
+  # go through sequence
+  for number in gauss_code[1:]:
+    arc_subsequence.append(number)
+    if number > 0:
+      positive_crossings_in_arc.append(number)
+    else:
+      if len(positive_crossings_in_arc) > 0:
+        for p in positive_crossings_in_arc:
+          arcs[p] = arc_subsequence
+        list_of_arcs.append(arc_subsequence)
+      else:
+        arcs[arc_subsequence[0]] = arc_subsequence
+        list_of_arcs.append(arc_subsequence)
+      positive_crossings_in_arc = []
+      arc_subsequence = [number]
+  if number > 0: # If the last number is positive finish the sequence via wrap-around
+    i = 0
+    while number > 0:
+      positive_crossings_in_arc.append(number)
+      number = gauss_code[i]
+      arc_subsequence.append(number)
+      i += 1
+    for p in positive_crossings_in_arc:
+      arcs[p] = arc_subsequence
+    list_of_arcs.append(arc_subsequence)
+  return arcs, list_of_arcs
+
+
+def get_wirtinger_from_arcs(gauss_code, arcs, arc_list):
+  gen_map = {}
+  gen_index = 1
+  # there are only up to 12 crossings in our set
+  # so we don't need to worry about time. If we
+  # do, then construct the generator dictionary
+  # in the knot_group_from_gauss function
+  for i in range(len(arc_list)):
+    if arc_list[i][0] == -1:
+      arc_list = arc_list[i:] + arc_list[:i]
+      break # ensures we start with -1
+
+  gen_string = ""
+  for arc in arc_list:
+    gen_map[str(arc)] = "x" + str(gen_index)
+    gen_string += "x" + str(gen_index) + ","
+    gen_index += 1
+  gen_string = gen_string[:-1]
+
+  quotient_string = ""
+  for i in range(len(arc_list)-1):
+    arc = arc_list[i]
+    quotient_string += gen_map[str(arc_list[i+1])] + "*,"
+    quotient_string += gen_map[str(arcs[arc[-1]*-1])] + ","
+    quotient_string += gen_map[str(arc_list[i])] + ","
+    quotient_string += gen_map[str(arcs[arc[-1]*-1])] + "* "
+  
+  bb_meridian = ""
+  for a in gauss_code.strip().split(','):
+    if int(a) < 0:
+      if int(a)*-1 in arcs:
+        bb_meridian += gen_map[str(arcs[int(a)*-1])] + ","
+      else:
+        bb_meridian += gen_map[str(arcs[int(a)])] + ","
+
+  return gen_string, quotient_string[:-1], bb_meridian[:-1]
+
+
+def printParticlesGauss(gaussCode):
+  g, l = knot_group_from_gauss(gaussCode)
+  g, q, lBB = get_wirtinger_from_arcs(gaussCode, g, l)
+  quotient_list = q.split(" ")
+  particles = particleTypes(g, quotient_list, lBB, True)
+  printQ = ""
+  for q in quotient_list:
+    for el in q.split(","):
+      printQ = printQ + el
+    printQ = printQ + "="
+  printQ = printQ + "1"
+  #os.system('clear')
+  print("For the fundamental group")
+  print("<"+g+"|"+printQ+">,")
+  print("the particle types are:")
+  print("\n")
+
+  for p in particles:
+    print("__________________________________________________________________")
+    print("|"+p)
+  print("__________________________________________________________________")
+  print("\n")
+
+
+def customGroupInput():
+  os.system('clear')
+  print("\n")
+  print("\t****************************************************************")
+  print("\t**  D_8 Dijkgraaf-Witten particle types on a knot complement  **")
+  print("\t****************************************************************")
+  print("\n")
+  print("\t Input the generators fundamental group of your manifold:")
+  print("\t Write the generators as one string, separated by a comma.")
+  print("\t For example, if your group is <x1, x2| x1^3=x2^2=x1^(-1)x2=1>,")
+  print("\t input the string as 'x1,x2' (without quotes). Not robust for")
+  print("\t inputs differing from these instructions.")
+  gens = input()
+  print("\t Now input the quotients of the group presentation. Separate")
+  print("\t the quotient words by a space. Denote the inverse of a")
+  print("\t generator by adding a '*' to the end. For the above example,")
+  print("\t the input would be 'x1,x1,x1 x2,x2 x1*,x2' (without quotes).")
+  quotients = input()
+  quotient_list = quotients.split(" ")
+  print("\t Now input the word of the meridian using the conventions above.")
+  lInput = input()
+
+  os.system('clear')
+  print("\t Calculating...")
+  particles = particleTypes(gens, quotient_list, lInput)
+  printQ = ""
+  for q in quotient_list:
+    for el in q.split(","):
+      printQ = printQ + el
+    printQ = printQ + "="
+  printQ = printQ + "1"
+
+  os.system('clear')
+  print("For the fundamental group")
+  print("<"+gens+"|"+printQ+">,")
+  print("the particle types are:")
+  print("\n")
+
+  for p in particles:
+    print("__________________________________________________________________")
+    print("|"+p)
+  print("__________________________________________________________________")
+  print("\n")
