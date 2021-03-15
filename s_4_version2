@@ -96,10 +96,9 @@ inverse = {
 }
 
 
+
 def checkQuotients(gens, code, qArray):
   gen_list = gens.split(",")
-  if gen_list[-1] == "":
-    gen_list = gen_list[:-1]
   code_list = code.split(",")
   if len(gen_list) != len(code_list):
     # this shouldn't come up
@@ -112,7 +111,7 @@ def checkQuotients(gens, code, qArray):
   for quotient in qArray:
     quotient_list = quotient.split(",")
     translatedQuotient = ""
-    # write quotients in terms of elements of S_4
+    # write quotients in terms of elements of s_4
     for q in quotient_list: # element in quotient
       if q[-1] == '*':
         translatedQuotient = translatedQuotient + inverse[dictionary[q[:-1]]]
@@ -120,16 +119,31 @@ def checkQuotients(gens, code, qArray):
         translatedQuotient = translatedQuotient + dictionary[q]
     if parseElement(translatedQuotient) != "1":
       return False
+  print("homomorphism: "+str(code))
   return True
 
 
+# generates all associations of generators to s_4 elements mod conjugation
+def addHomomorphisms(code_set, prefix, k, genString, quotientArray, setOfElements):
+  if k == 0:
+    if checkQuotients(genString, prefix, quotientArray):
+      code_set.append(prefix)
+    return
+  for element in setOfElements:
+    newPrefix = prefix + "," + element
+    if prefix == "":
+      newPrefix = element
+    addHomomorphisms(code_set, newPrefix, k-1, genString, quotientArray, setOfElements)
+
+# given a tuple (python list) of elements of s_4 and an element of s_4,
+# returns the conjugated tuple by that element
 def conjugate(word, el):
   word_list = word.split(",")
   conjugated = []
   for c in word_list:
     conjugated.append(parseElement(el + c + inverse[el]))
   return ",".join(conjugated)
-  
+
 
 # with an input of, say, 'x11' returns 11
 def index(generatorString):
@@ -146,36 +160,25 @@ def checkQuotientsWirtinger(c, qArray):
     relation = quotient.split(",")
     if conjugate(c[index(relation[2])-1],c[index(relation[1])-1]) != c[index(relation[0])-1]:
       return False
-  print("homomorphism: "+str(c))
+  #print("homomorphism: "+str(c))
   return True
 
 
-def addHomomorphisms(code_set, prefix, k, genString, quotientArray, setOfElements):
+def addHomomorphismsWirtinger(code_set, prefix, k, indNum, g, qList, simplifyList, setOfElements):
   if k == 0:
-    if checkQuotients(genString, prefix, quotientArray):
-      code_set.append(prefix)
-    return
-  for element in setOfElements:
-    newPrefix = prefix + "," + element
-    if prefix == "":
-      newPrefix = element
-    addHomomorphisms(code_set, newPrefix, k-1, genString, quotientArray, setOfElements)
-
-
-def addHomomorphismsWirtinger(code_set, prefix, k, indNum, gString, qList, simplifyList, setOfElements):
-  if k == 0:
-    for i in range(len(gString)-indNum):
-      prefix.append(conjugate(prefix[-1],prefix[index(simplifyList[i])]))
-    if checkQuotientsWirtinger(prefix, qList):
+    for i in range(len(g)-indNum):
+      prefix.append(conjugate(prefix[-1], prefix[index(simplifyList[i])-1]))
+    if checkQuotients(",".join(g), ",".join(prefix), qList): #checkQuotientsWirtinger(prefix, qList):
       code_set.append(",".join(prefix))
     return
   for element in setOfElements:
+    previousLength = len(prefix)
     if prefix == []:
       prefix = [element]
     else:
       prefix.append(element)
-    addHomomorphismsWirtinger(code_set, prefix, k-1, indNum, gString, qList, simplifyList, setOfElements)
-    prefix = prefix[:-1]
+    addHomomorphismsWirtinger(code_set, prefix, k-1, indNum, g, qList, simplifyList, setOfElements)
+    prefix = prefix[:previousLength]
 
 
 def simplifyWirtinger(code_set, generators, quotientList):
@@ -186,14 +189,14 @@ def simplifyWirtinger(code_set, generators, quotientList):
   length = len(gs)
   sList = []
   for q in reversed(quotientList):
-    rel = q.split(",")
-    if index(rel[1]) > length:
+    relation = q.split(",")
+    if index(relation[1]) > length:
       break
     length -= 1
     if sList == []:
-      sList = [rel[1]]
+      sList = [relation[1]]
     else:
-      sList.append(rel[1])
+      sList.append(relation[1])
   sList = [e for e in reversed(sList)]
   for cClass in conjugacyClassesList:
     addHomomorphismsWirtinger(code_set, [], length, length, gs, quotientList, sList, cClass.split(","))
@@ -220,7 +223,7 @@ def computeLBB(gens, code, l):
   dictionary = {}
   for i in range(0,len(gen_list)):
     dictionary.update({gen_list[i]: code_list[i]})
-  # map l_bb word via homomorphism into d_4
+  # map l_bb word via homomorphism into s_4
   l_s4 = ""
   for l_letter in l_list:
     if l_letter[-1] == '*':
@@ -276,17 +279,18 @@ def particleTypes(generators, quotientsArray, lBB, wirtinger):
     simplifyWirtinger(homomorphismSet, generators, quotientsArray)
   else:
     addHomomorphisms(homomorphismSet, "", len(generators.split(",")), generators, quotientsArray, s_4)
-
-  homModConjugation = {} # given elements associated to generators modulo conjugation, give (m, l)
-  homCenter = {} # given a (m, l), compute its center
+  homModConjugation = {}
+  homCenter = {}
   # compute l, mod out (m, l) set by conjugation
   for codeCand in homomorphismSet:
     blackboardMeridian = computeLBB(generators, codeCand, lBB)
-    pair = codeCand.split(",")[0] + "," + blackboardMeridian
-    if not checkConjugate(homModConjugation.values(), pair):
-      homModConjugation[codeCand] = pair
-      center = computeCenter(codeCand.split(",")[0], blackboardMeridian)
-      homCenter[pair] = center
+    codeList = codeCand.split(",")
+    for i in range(len(codeList)):
+      pair = codeList[i] + "," + blackboardMeridian
+      if not checkConjugate(homModConjugation.values(), pair):
+        homModConjugation[codeCand] = pair
+        center = computeCenter(codeList[i], blackboardMeridian)
+        homCenter[pair] = center
   particleTypes = set([])
   # pair (m, l) with representations, take direct sums if need be
   for hom in homModConjugation.keys():
@@ -294,7 +298,8 @@ def particleTypes(generators, quotientsArray, lBB, wirtinger):
     pairCenter = homCenter[pair]
     findS_4Subgroup(pair, hom, pairCenter, particleTypes)
   return particleTypes
-  
+
+
 
 def knot_group_from_gauss(gauss_code_string):
   # creates list of ints from the string input of the gauss code
@@ -364,13 +369,19 @@ def get_wirtinger_from_arcs(gauss_code, arcs, arc_list):
   gen_string = gen_string[:-1]
 
   quotient_string = ""
+  
+  arc = arc_list[-1] # kept this out front for wirtinger simplifcation later
+  quotient_string += gen_map[str(arc_list[0])] + "*,"
+  quotient_string += gen_map[str(arcs[arc[-1]*-1])] + ","
+  quotient_string += gen_map[str(arc_list[-1])] + ","
+  quotient_string += gen_map[str(arcs[arc[-1]*-1])] + "* "
   for i in range(len(arc_list)-1):
     arc = arc_list[i]
     quotient_string += gen_map[str(arc_list[i+1])] + "*,"
     quotient_string += gen_map[str(arcs[arc[-1]*-1])] + ","
     quotient_string += gen_map[str(arc_list[i])] + ","
     quotient_string += gen_map[str(arcs[arc[-1]*-1])] + "* "
-  
+
   bb_meridian = ""
   for a in gauss_code.strip().split(','):
     if int(a) < 0:
@@ -397,6 +408,7 @@ def printParticlesGauss(gaussCode):
   print("For the fundamental group")
   print("<"+g+"|"+printQ+">,")
   print("the particle types are:")
+  print("with meridian "+lBB)
   print("\n")
 
   for p in particles:
@@ -435,12 +447,13 @@ def customGroupInput():
   for q in quotient_list:
     for el in q.split(","):
       printQ = printQ + el
-    printQ = printQ + "="
+    printQ = printQ + " = "
   printQ = printQ + "1"
 
   os.system('clear')
   print("For the fundamental group")
   print("<"+gens+"|"+printQ+">,")
+  print("with meridian "+lInput)
   print("the particle types are:")
   print("\n")
 
@@ -448,4 +461,4 @@ def customGroupInput():
     print("__________________________________________________________________")
     print("|"+p)
   print("__________________________________________________________________")
-  print("\n")
+  print("\n") # m2*,m1,m3,m1* m3*,m2,m1,m2* m1*,m3,m2,m3*
