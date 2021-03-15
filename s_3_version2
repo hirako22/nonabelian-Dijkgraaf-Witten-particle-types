@@ -144,7 +144,7 @@ def addHomomorphismsWirtinger(code_set, prefix, k, indNum, g, qList, simplifyLis
 def simplifyWirtinger(code_set, generators, quotientList):
   conjugacyClassesList = conjugacyClassesS3.split(" ")
   # since all generators in a Wirtinger presentation are related by conjugations,
-  # we select our maps from conjugacy classes in d_8
+  # we select our maps from conjugacy classes in s_3
   gs = generators.split(",")
   length = len(gs)
   sList = []
