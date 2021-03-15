@@ -60,7 +60,7 @@ def checkQuotients(gens, code, qArray):
   for quotient in qArray:
     quotient_list = quotient.split(",")
     translatedQuotient = ""
-    # write quotients in terms of elements of S_3
+    # write quotients in terms of elements of d_8
     for q in quotient_list: # element in quotient
       if q[-1] == '*':
         translatedQuotient = translatedQuotient + inverse[dictionary[q[:-1]]]
@@ -72,19 +72,19 @@ def checkQuotients(gens, code, qArray):
   return True
 
 
-# generates all associations of generators to S_3 elements mod conjugation
+# generates all associations of generators to D_8 elements mod conjugation
 def addHomomorphisms(code_set, prefix, k, genString, quotientArray):
   if k == 0:
     if checkQuotients(genString, prefix, quotientArray):
       code_set.append(prefix)
     return
-  for element in s_3:
+  for element in d_8:
     newPrefix = prefix + "," + element
     if prefix == "":
       newPrefix = element
     addHomomorphisms(code_set, newPrefix, k-1, genString, quotientArray)
 
-# given a tuple (python list) of elements of s_3 and an element of s_3,
+# given a tuple (python list) of elements of d_8 and an element of d_8,
 # returns the conjugated tuple by that element
 def conjugate(word, el):
   word_list = word.split(",")
