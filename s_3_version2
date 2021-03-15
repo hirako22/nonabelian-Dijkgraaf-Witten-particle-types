@@ -67,6 +67,7 @@ def checkQuotients(gens, code, qArray):
         translatedQuotient = translatedQuotient + dictionary[q]
     if parseElement(translatedQuotient) != "1":
       return False
+  #print("homomorphism: "+str(code))
   return True
 
 
@@ -92,6 +93,25 @@ def conjugate(word, el):
   return ",".join(conjugated)
 
 
+# with an input of, say, 'x11' returns 11
+def index(generatorString):
+  if generatorString[-1] == '*':
+    generatorString = generatorString[:-1]
+  if len(generatorString) == 2:
+    return int(generatorString[-1])
+  else: # only handles a double-digit number of generators
+    return int(generatorString[1:])
+
+
+def checkQuotientsWirtinger(c, qArray):
+  for quotient in reversed(qArray):
+    relation = quotient.split(",")
+    if conjugate(c[index(relation[2])-1],c[index(relation[1])-1]) != c[index(relation[0])-1]:
+      return False
+  #print("homomorphism: "+str(c))
+  return True
+
+
 def addHomomorphisms(code_set, prefix, k, genString, quotientArray, setOfElements):
   if k == 0:
     if checkQuotients(genString, prefix, quotientArray):
@@ -104,20 +124,21 @@ def addHomomorphisms(code_set, prefix, k, genString, quotientArray, setOfElement
     addHomomorphisms(code_set, newPrefix, k-1, genString, quotientArray, setOfElements)
 
 
-def addHomomorphismsWirtinger(code_set, prefix, k, indNum, gString, qList, simplifyList, setOfElements):
+def addHomomorphismsWirtinger(code_set, prefix, k, indNum, g, qList, simplifyList, setOfElements):
   if k == 0:
-    for i in range(len(gString)-indNum):
-      prefix.append(conjugate(prefix[-1],prefix[index(simplifyList[i])]))
-    if checkQuotientsWirtinger(prefix, qList):
+    for i in range(len(g)-indNum):
+      prefix.append(conjugate(prefix[-1], prefix[index(simplifyList[i])-1]))
+    if checkQuotients(",".join(g), ",".join(prefix), qList): #checkQuotientsWirtinger(prefix, qList):
       code_set.append(",".join(prefix))
     return
   for element in setOfElements:
+    previousLength = len(prefix)
     if prefix == []:
       prefix = [element]
     else:
       prefix.append(element)
-    addHomomorphismsWirtinger(code_set, prefix, k-1, indNum, gString, qList, simplifyList, setOfElements)
-    prefix = prefix[:-1]
+    addHomomorphismsWirtinger(code_set, prefix, k-1, indNum, g, qList, simplifyList, setOfElements)
+    prefix = prefix[:previousLength]
 
 
 def simplifyWirtinger(code_set, generators, quotientList):
@@ -128,14 +149,14 @@ def simplifyWirtinger(code_set, generators, quotientList):
   length = len(gs)
   sList = []
   for q in reversed(quotientList):
-    rel = q.split(",")
-    if index(rel[1]) > length:
+    relation = q.split(",")
+    if index(relation[1]) > length:
       break
     length -= 1
     if sList == []:
-      sList = [rel[1]]
+      sList = [relation[1]]
     else:
-      sList.append(rel[1])
+      sList.append(relation[1])
   sList = [e for e in reversed(sList)]
   for cClass in conjugacyClassesList:
     addHomomorphismsWirtinger(code_set, [], length, length, gs, quotientList, sList, cClass.split(","))
@@ -172,6 +193,7 @@ def computeLBB(gens, code, l):
     else:
       l_s3 = l_s3 + dictionary[l_letter]
   return parseElement(l_s3)
+
 
 # given the image of the homomorphism of the pi_1(T^2), returns a list of the
 # elements of S_3 that commute with the two elements
@@ -214,11 +236,13 @@ def particleTypes(generators, quotientsArray, lBB, wirtinger):
   # compute l, mod out (m, l) set by conjugation
   for codeCand in homomorphismSet:
     blackboardMeridian = computeLBB(generators, codeCand, lBB)
-    pair = codeCand.split(",")[0] + "," + blackboardMeridian
-    if not checkConjugate(homModConjugation.values(), pair):
-      homModConjugation[codeCand] = pair
-      center = computeCenter(codeCand.split(",")[0], blackboardMeridian)
-      homCenter[pair] = center
+    codeList = codeCand.split(",")
+    for i in range(len(codeList)):
+      pair = codeList[i] + "," + blackboardMeridian
+      if not checkConjugate(homModConjugation.values(), pair):
+        homModConjugation[codeCand] = pair
+        center = computeCenter(codeList[i], blackboardMeridian)
+        homCenter[pair] = center
   particleTypes = set([])
   # pair (m, l) with representations, take direct sums if need be
   # the only subgroups of S_3 are Z_2 and Z_3
@@ -227,6 +251,7 @@ def particleTypes(generators, quotientsArray, lBB, wirtinger):
     pairCenter = homCenter[pair]
     findS_3Subgroup(pair, hom, pairCenter, particleTypes)
   return particleTypes
+
 
 
 def knot_group_from_gauss(gauss_code_string):
@@ -297,13 +322,19 @@ def get_wirtinger_from_arcs(gauss_code, arcs, arc_list):
   gen_string = gen_string[:-1]
 
   quotient_string = ""
+  
+  arc = arc_list[-1] # kept this out front for wirtinger simplifcation later
+  quotient_string += gen_map[str(arc_list[0])] + "*,"
+  quotient_string += gen_map[str(arcs[arc[-1]*-1])] + ","
+  quotient_string += gen_map[str(arc_list[-1])] + ","
+  quotient_string += gen_map[str(arcs[arc[-1]*-1])] + "* "
   for i in range(len(arc_list)-1):
     arc = arc_list[i]
     quotient_string += gen_map[str(arc_list[i+1])] + "*,"
     quotient_string += gen_map[str(arcs[arc[-1]*-1])] + ","
     quotient_string += gen_map[str(arc_list[i])] + ","
     quotient_string += gen_map[str(arcs[arc[-1]*-1])] + "* "
-  
+
   bb_meridian = ""
   for a in gauss_code.strip().split(','):
     if int(a) < 0:
@@ -329,6 +360,7 @@ def printParticlesGauss(gaussCode):
   #os.system('clear')
   print("For the fundamental group")
   print("<"+g+"|"+printQ+">,")
+  print("with meridian "+lBB)
   print("the particle types are:")
   print("\n")
 
@@ -363,7 +395,7 @@ def customGroupInput():
 
   os.system('clear')
   print("\t Calculating...")
-  particles = particleTypes(gens, quotient_list, lInput)
+  particles = particleTypes(gens, quotient_list, lInput, False)
   printQ = ""
   for q in quotient_list:
     for el in q.split(","):
@@ -374,6 +406,7 @@ def customGroupInput():
   os.system('clear')
   print("For the fundamental group")
   print("<"+gens+"|"+printQ+">,")
+  print("with meridian "+lInput)
   print("the particle types are:")
   print("\n")
 
