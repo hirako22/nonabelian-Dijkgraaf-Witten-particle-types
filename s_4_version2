@@ -119,7 +119,7 @@ def checkQuotients(gens, code, qArray):
         translatedQuotient = translatedQuotient + dictionary[q]
     if parseElement(translatedQuotient) != "1":
       return False
-  print("homomorphism: "+str(code))
+  #print("homomorphism: "+str(code))
   return True
 
 
