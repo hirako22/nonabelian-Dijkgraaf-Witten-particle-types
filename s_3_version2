@@ -71,18 +71,6 @@ def checkQuotients(gens, code, qArray):
   return True
 
 
-# generates all associations of generators to S_3 elements mod conjugation
-def addHomomorphisms(code_set, prefix, k, genString, quotientArray):
-  if k == 0:
-    if checkQuotients(genString, prefix, quotientArray):
-      code_set.append(prefix)
-    return
-  for element in s_3:
-    newPrefix = prefix + "," + element
-    if prefix == "":
-      newPrefix = element
-    addHomomorphisms(code_set, newPrefix, k-1, genString, quotientArray)
-
 # given a tuple (python list) of elements of s_3 and an element of s_3,
 # returns the conjugated tuple by that element
 def conjugate(word, el):
