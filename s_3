@@ -41,7 +41,7 @@ inverse = {
     "a": "aa",
     "aa": "a",
     "ar": "ar",
-    "aar": "ra"
+    "aar": "aar"
 }
 
 # given a string of generators (each char denotes a generator) and an array of
@@ -75,7 +75,7 @@ def checkQuotients(gens, code, qArray):
 
 
 # given a tuple (python list) of elements of s_3 and an element of s_3,
-# returns the conjugated tuple by that element
+# returns the conjugated word by that element
 def conjugate(word, el):
   word_list = word.split(",")
   conjugated = []
@@ -93,7 +93,7 @@ def index(generatorString):
   else: # only handles a double-digit number of generators
     return int(generatorString[1:])
 
-
+# doesn't account for chirality yet -- don't use
 def checkQuotientsWirtinger(c, qArray):
   for quotient in reversed(qArray): # x1*,x2,x3,x2* x2*,x3,x1,x3* x3*,x1,x2,x1*
     relation = quotient.split(",")  # [x3*, x1, x2, x1*]
@@ -115,16 +115,27 @@ def addHomomorphisms(code_set, prefix, k, genString, quotientArray, setOfElement
     addHomomorphisms(code_set, newPrefix, k-1, genString, quotientArray, setOfElements)
 
 
+"""
+code_set = set of codes that work out to be the image of a homomorphism
+prefix = the current code we're assembling
+k = elements left to add to our prefix
+indNum = number of elements we can independently choose before the rest of the quotient
+         relations can determine the rest of the letters of our potential code
+g = list of strings, where each string is a generator
+qList = list of quotient strings
+setOfElements = the elements from which we're drawing our letters for our potential code
+"""
 def addHomomorphismsWirtinger(code_set, prefix, k, indNum, g, qList, simplifyList, setOfElements):
   if k == 0:
+    initialLength = len(prefix)
     for i in range(len(g)-indNum):
-      rel = qList[i+len(prefix)-1]
+      rel = qList[i+initialLength]
       relList = rel.split(",")
       if relList[1][-1] == "*":
-        prefix.append(conjugate(inverse[prefix[-1]], prefix[simplifyList[i]-1]))
+        prefix.append(conjugate(prefix[-1], inverse[prefix[simplifyList[i]-1]])) # inverse
       else:
         prefix.append(conjugate(prefix[-1], prefix[simplifyList[i]-1]))
-    if checkQuotients(",".join(g), ",".join(prefix), qList): #checkQuotientsWirtinger(prefix, qList):
+    if checkQuotients(",".join(g), ",".join(prefix), qList):
       code_set.append(",".join(prefix))
     return
   for element in setOfElements:
@@ -147,7 +158,7 @@ def simplifyWirtinger(code_set, generators, quotientList):
   for q in reversed(quotientList):  # x1*,x2,x3,x2* x2*,x3,x1,x3* x3*,x1,x2,x1*
     relation = q.split(",")         # [x3*, x1, x2, x1*]
     num = index(relation[1])
-    if num > length:
+    if num >= length:
       break
     length -= 1
     sList.append(num)
@@ -427,6 +438,7 @@ def particleTypes(generators, quotientsArray, longitude, wirtinger):
   homModConjugation = {}
   homCenter = {}
   homMod = []
+  #print(homomorphismSet)
   for homomorphism in homomorphismSet:
     h = homomorphism.split(",")
     if h[0] == 'r' or h[0] == '1' or h[0] == 'a':
@@ -570,7 +582,7 @@ def get_wirtinger_from_arcs(gauss_code, arcs, arc_list, signs):
 
 def makeL0(l_bb):
   lList = l_bb.split(",")
-  while lList[0] != 'x1':
+  while lList[0] != 'x1' and lList[0] != 'x1*':
     lList = lList[1:] + lList[:1]
   powerCount = 0
   for generator in lList:
