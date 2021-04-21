@@ -1,13 +1,16 @@
 import os
 import string
+import numpy as np
+import itertools
+
 
 d_8 = ["1", "r", "a", "aa", "aaa", "ra", "raa", "raaa"]
 
 conjugacyClassesD8 = "1 r,raa a,aaa aa ra,raaa"
 
-def parseElement(d4_string):
+def parseElement(d8_string):
   permuted = [1, 2, 3, 4]
-  for letter in reversed(d4_string):
+  for letter in reversed(d8_string):
     if letter == 'a':
       permuted = [permuted[3], permuted[0], permuted[1], permuted[2]]
     elif letter == 'r':
@@ -46,6 +49,10 @@ inverse = {
 }
 
 
+# given a string of generators (each char denotes a generator) and an array of
+# associated elements of d_8 under the proposed homomorphism (which is referred
+# to here as a CODE), creates a dictionary. Given an array of quotient strings, 
+# checks if the code gives a viable homomorphism.
 def checkQuotients(gens, code, qArray):
   gen_list = gens.split(",")
   code_list = code.split(",")
@@ -70,15 +77,15 @@ def checkQuotients(gens, code, qArray):
       return False
   #print("homomorphism: "+str(code))
   return True
-  
+
 
 # given a tuple (python list) of elements of d_8 and an element of d_8,
-# returns the conjugated tuple by that element
+# returns the conjugated word by that element
 def conjugate(word, el):
   word_list = word.split(",")
   conjugated = []
   for c in word_list:
-    conjugated.append(parseElement(el + c + inverse[el]))
+    conjugated.append(parseElement(el + c + inverse[el])) # ghg^{-1}
   return ",".join(conjugated)
 
 
@@ -91,10 +98,10 @@ def index(generatorString):
   else: # only handles a double-digit number of generators
     return int(generatorString[1:])
 
-
+# doesn't account for chirality yet -- don't use
 def checkQuotientsWirtinger(c, qArray):
-  for quotient in reversed(qArray):
-    relation = quotient.split(",")
+  for quotient in reversed(qArray): # x1*,x2,x3,x2* x2*,x3,x1,x3* x3*,x1,x2,x1*
+    relation = quotient.split(",")  # [x3*, x1, x2, x1*]
     if conjugate(c[index(relation[2])-1],c[index(relation[1])-1]) != c[index(relation[0])-1]:
       return False
   #print("homomorphism: "+str(c))
@@ -113,11 +120,27 @@ def addHomomorphisms(code_set, prefix, k, genString, quotientArray, setOfElement
     addHomomorphisms(code_set, newPrefix, k-1, genString, quotientArray, setOfElements)
 
 
+"""
+code_set = set of codes that work out to be the image of a homomorphism
+prefix = the current code we're assembling
+k = elements left to add to our prefix
+indNum = number of elements we can independently choose before the rest of the quotient
+         relations can determine the rest of the letters of our potential code
+g = list of strings, where each string is a generator
+qList = list of quotient strings
+setOfElements = the elements from which we're drawing our letters for our potential code
+"""
 def addHomomorphismsWirtinger(code_set, prefix, k, indNum, g, qList, simplifyList, setOfElements):
   if k == 0:
+    initialLength = len(prefix)
     for i in range(len(g)-indNum):
-      prefix.append(conjugate(prefix[-1], prefix[index(simplifyList[i])-1]))
-    if checkQuotients(",".join(g), ",".join(prefix), qList): #checkQuotientsWirtinger(prefix, qList):
+      rel = qList[i+initialLength]
+      relList = rel.split(",")
+      if relList[1][-1] == "*":
+        prefix.append(conjugate(prefix[-1], inverse[prefix[simplifyList[i]-1]])) # inverse
+      else:
+        prefix.append(conjugate(prefix[-1], prefix[simplifyList[i]-1]))
+    if checkQuotients(",".join(g), ",".join(prefix), qList):
       code_set.append(",".join(prefix))
     return
   for element in setOfElements:
@@ -137,20 +160,21 @@ def simplifyWirtinger(code_set, generators, quotientList):
   gs = generators.split(",")
   length = len(gs)
   sList = []
-  for q in reversed(quotientList):
-    relation = q.split(",")
-    if index(relation[1]) > length:
+  for q in reversed(quotientList):  # x1*,x2,x3,x2* x2*,x3,x1,x3* x3*,x1,x2,x1*
+    relation = q.split(",")         # [x3*, x1, x2, x1*]
+    num = index(relation[1])
+    if num >= length:
       break
     length -= 1
-    if sList == []:
-      sList = [relation[1]]
-    else:
-      sList.append(relation[1])
+    sList.append(num)
   sList = [e for e in reversed(sList)]
   for cClass in conjugacyClassesList:
     addHomomorphismsWirtinger(code_set, [], length, length, gs, quotientList, sList, cClass.split(","))
 
 
+# given a set of codes and a new potential code, checks if the code is a
+# conjugate of any already present code. Returns True if the new code is a
+# conjugate, False otherwise
 def checkConjugate(codeSet, newCode):
   if newCode in codeSet:
     return False
@@ -161,9 +185,207 @@ def checkConjugate(codeSet, newCode):
   return False
 
 
-def computeLBB(gens, code, l):
+
+def python2sort(x):
+  it = iter(x)
+  groups = [[next(it)]]
+  for item in it:
+    for group in groups:
+      try:
+        item < group[0]  # exception if not comparable
+        group.append(item)
+        break
+      except TypeError:
+        continue
+    else:  # did not break, make new group
+      groups.append([item])
+  return itertools.chain.from_iterable(sorted(group) for group in groups)
+
+
+def get_color_spread(n):
+  start = 16711680
+  hexStrings = []
+  if n < 30: # should always be the case for our purposes
+    for i in range(n):
+      hexStrings.append(hex(start+i))
+  return hexStrings
+
+
+# almost completely copied from https://www.cs.mcgill.ca/~aassaf9/python/algorithm_x.html by Ali Assaf
+def select(X, Y, r):
+  cols = []
+  for j in Y[r]:
+    for i in X[j]:
+      for k in Y[i]:
+        if k != j:
+          X[k].remove(i)
+    cols.append(X.pop(j))
+  return cols
+
+def deselect(X, Y, r, cols):
+  for j in reversed(Y[r]):
+    X[j] = cols.pop()
+    for i in X[j]:
+      for k in Y[i]:
+        if k != j:
+          X[k].add(i)
+
+def solve(X, Y, solution=[]):
+  if not X:
+    yield list(solution)
+  else:
+    c = min(X, key=lambda c: len(X[c]))
+    for r in list(X[c]):
+      solution.append(r)
+      cols = select(X, Y, r)
+      for s in solve(X, Y, solution):
+        yield s
+      deselect(X, Y, r, cols)
+      solution.pop()
+
+
+def algorithm_X(rows):
+  Xa, Ya = {}, {}
+  max = 0
+  for i in range(len(rows)):
+    row = rows[i]
+    Ya[i] = row
+    if np.max(row) > max:
+      max = np.max(row)
+  Xa = {i: set() for i in range(max+1)}
+  for i in Ya:
+    for j in Ya[i]:
+      Xa[j].add(i)
+  allSols = []
+  for solution in solve(Xa, Ya, []):
+    allSols.append(solution)
+  return allSols
+
+
+# taken/modified from sage.graphs.graph_coloring
+# https://github.com/sagemath/sagelib/blob/master/sage/graphs/graph.py
+# .coloring() calls .first_coloring() in graphs/graph_coloring.py
+# .first_coloring() calls .all_graph_colorings() in same file
+def all_graph_colorings(V,E,n):
+  # V = vertices, E = edges
+  if n == 0: return
+  nV, nE = len(V), len(E)
+  ones, N, Vd, colormap, k = [], range(n), {}, {}, 0
+  for i in range(nV):
+    v = V[i]
+    Vd[v] = i
+    for c in N:
+      ones.append([k, [i]])
+      colormap[k] = (v,c)
+      k+=1
+  kk = nV
+  for e in E:
+    for c in N:
+      v0, v1 = n*Vd[e[0]]+c, n*Vd[e[1]]+c
+      ones[v0][1].append(kk+c)
+      ones[v1][1].append(kk+c)
+    kk+=n
+  if n > 2:
+    for i in range(n*nE):
+      ones.append([k+i, [nV+i]])
+  colors = get_color_spread(n) # just create n distinct colors, n <= 30, if more then add something
+  for i in range(len(ones)): ones[i] = ones[i][1]
+  try: #########################################################################
+    exc = algorithm_X(ones)
+    for a in exc:
+      coloring = {}
+      for x in a:
+        if x in colormap:
+          v,c = colormap[x]
+          if colors[c] in coloring:
+            coloring[colors[c]].append(v)
+          else:
+            coloring[colors[c]] = [v]
+      if len(list(coloring.values())) == 2:
+        yield coloring # indented to be included in if statement
+        break
+  except RuntimeError:
+    raise RuntimeError("Too much recursion!  Graph coloring failed.")
+
+
+def recover_orientations(gauss):
+  signs_overunder = [1 if letter > 0 else -1 for letter in gauss]
+  gauss = [abs(x) for x in gauss]
+  n = len(gauss) // 2
+  # first step, perform subword reversals
+  changed = list(gauss)
+  for i in range(1, n + 1):
+    id0 = changed.index(i)
+    start = changed[:id0 + 1]
+    after0 = changed[id0 + 1:]
+    id1 = after0.index(i)
+    middle = list(reversed(after0[:id1]))
+    end = after0[id1:]
+    changed = start + middle + end
+  # build noncrossing planar diagram
+  pairings = [[] for _ in range(n)]
+  for pos, letter in enumerate(changed):
+    pairings[letter - 1].append(pos)
+  pairings = [tuple(ab) for ab in pairings] # these are vertices
+  def cross(ab, cd):
+    a, b = ab
+    c, d = cd
+    if c < a:
+      a, b, c, d = c, d, a, b
+    return a < c < b < d
+  #####################################################
+  edges = []
+  verts = list(pairings)
+  numVerts = len(pairings)
+  for u in range(numVerts): #x
+    for v in range(u+1): #x
+      uu, vv = verts[u], verts[v]
+      if cross(uu,vv):
+        edges.append((uu,vv))
+  for m in range(n, numVerts+1): #x
+    for C in all_graph_colorings(verts, edges, m):
+      # in python 3 C.values() is its own object which cannot subscript
+      colors = list(C.values()) # in python 2, C.values() would be a list
+      break
+    break
+  #####################################################
+  if colors is None:  # empty graph
+    positive = []
+    negative = []
+  elif len(colors) == 1:
+    positive = colors[0]
+    negative = []
+  else:
+    positive, negative = python2sort(colors)
+  positive.sort()
+  negative.sort()
+  # determine the local orientations
+  signs_local = {d: 1 for d in range(1, n + 1)}
+  for x, _ in negative:
+    signs_local[changed[x]] *= -1
+  jump_from = {}
+  for x, y in positive + negative:
+    jump_from[x] = y
+    jump_from[y] = x
+  direction = 1
+  position = 0
+  for k in range(2*n):
+    letter = changed[position]
+    new_position = jump_from[position]
+    signe = signs_local[letter]
+    if new_position < position:
+      signe = -signe
+    if direction == 1:
+      signe *= signs_overunder[k]
+    signs_local[letter] = signe
+    direction = -direction
+    position = new_position + direction
+  signs_final = [signs_local[d] for d in range(1, n + 1)]
+  return changed, positive, negative, signs_final
+
+
+def computeLongitude(gens, code_list, l):
   gen_list = gens.split(",")
-  code_list = code.split(",")
   l_list = l.split(",")
   if len(gen_list) != len(code_list):
     # this shouldn't come up
@@ -182,6 +404,8 @@ def computeLBB(gens, code, l):
   return parseElement(l_d8)
 
 
+# given the image of the homomorphism of the pi_1(T^2), returns a list of the
+# elements of d_8 that commute with the two elements
 def computeCenter(m, l):
   commuters = ["1"]
   for element in d_8[1:]:
@@ -221,7 +445,7 @@ def findD_8Subgroup(torus, homomorphism, centerOfTorus, particleSet):
   return
 
 
-def particleTypes(generators, quotientsArray, lBB, wirtinger):
+def particleTypes(generators, quotientsArray, longitude, wirtinger):
   homomorphismSet = []
   # create all associations of generators with elements in d_8
   if wirtinger:
@@ -230,18 +454,22 @@ def particleTypes(generators, quotientsArray, lBB, wirtinger):
     addHomomorphisms(homomorphismSet, "", len(generators.split(",")), generators, quotientsArray, d_8)
   homModConjugation = {}
   homCenter = {}
-  # compute l, mod out (m, l) set by conjugation
-  for codeCand in homomorphismSet:
-    blackboardMeridian = computeLBB(generators, codeCand, lBB)
-    codeList = codeCand.split(",")
-    for i in range(len(codeList)):
-      pair = codeList[i] + "," + blackboardMeridian
-      if not checkConjugate(homModConjugation.values(), pair):
-        homModConjugation[codeCand] = pair
-        center = computeCenter(codeList[i], blackboardMeridian)
-        homCenter[pair] = center
+  homMod = []
+  #print(homomorphismSet)
+  for homomorphism in homomorphismSet:
+    h = homomorphism.split(",")
+    if h[0] == 'r' or h[0] == '1' or h[0] == 'a' or h[0] == 'aa' or h[0] == 'ra':
+      homMod.append(h)
+  # compute l
+  for codeCand in homMod:
+    lImage = computeLongitude(generators, codeCand, longitude)
+    pair = codeCand[0] + "," + lImage
+    homModConjugation[",".join(codeCand)] = pair
+    center = computeCenter(codeCand[0], lImage)
+    homCenter[pair] = center
   particleTypes = set([])
   # pair (m, l) with representations, take direct sums if need be
+  # the only proper subgroups of d_8 are z_2, z_4, Klein, d_8
   for hom in homModConjugation.keys():
     pair = homModConjugation[hom]
     pairCenter = homCenter[pair]
@@ -250,9 +478,17 @@ def particleTypes(generators, quotientsArray, lBB, wirtinger):
 
 
 
+"""
+Each sequence between negative numbers in the gauss code represents an arc in the
+blackboard presentation. We return a dictionary in which the positive numbers
+between the negative numbers will map to the arc that they're a part of. We also
+return a list of the arcs. The arcs in both returns are represented by a list of
+integers, with negative integers on the ends of the list.
+"""
 def knot_group_from_gauss(gauss_code_string):
   # creates list of ints from the string input of the gauss code
   gauss_code = [int(i) for i in gauss_code_string.strip().split(',')]
+  ch, pos, neg, signs = recover_orientations(gauss_code) # get crossings chirality
   arcs = {} # dictionary - keys are the positive ints, values are subsequences
   arc_subsequence = []
   positive_crossings_in_arc = []
@@ -295,10 +531,24 @@ def knot_group_from_gauss(gauss_code_string):
     for p in positive_crossings_in_arc:
       arcs[p] = arc_subsequence
     list_of_arcs.append(arc_subsequence)
-  return arcs, list_of_arcs
+  return arcs, list_of_arcs, signs
 
 
-def get_wirtinger_from_arcs(gauss_code, arcs, arc_list):
+"""
+Given 1) a dictionary: positive numbers -> the arc they're on, and 2) a list of
+the arcs, we create a dictionary: arcs -> "x_n", where n runs over the length of
+the list of arcs. With 3), a list of the orientations of the crossings (given an
+orientation, we construct the list of quotients; for each arc from the arc list:
+
+    arc_list[i+1] = arc ->_gm "x_{i+1}" 
+    arc[-1] = positive crossing ->_al arc with said positive crossing ->_gm "x_j"
+    arc_list[i] = arc ->_gm "x_i"
+
+where ->_gm is using the generator map constructed in this function, and ->_al
+is using the map from positive crossings to arcs constructed in the previous
+function.
+"""
+def get_wirtinger_from_arcs(gauss_code, arcs, arc_list, signs):
   gen_map = {}
   gen_index = 1
   # there are only up to 12 crossings in our set
@@ -309,44 +559,71 @@ def get_wirtinger_from_arcs(gauss_code, arcs, arc_list):
     if arc_list[i][0] == -1:
       arc_list = arc_list[i:] + arc_list[:i]
       break # ensures we start with -1
-
   gen_string = ""
   for arc in arc_list:
     gen_map[str(arc)] = "x" + str(gen_index)
     gen_string += "x" + str(gen_index) + ","
     gen_index += 1
   gen_string = gen_string[:-1]
-
   quotient_string = ""
-  
-  arc = arc_list[-1] # kept this out front for wirtinger simplifcation later
+  arc = arc_list[-1] # kept this out front for wirtinger simplification later
+  chirality = signs[-1*arc[-1]-1]
   quotient_string += gen_map[str(arc_list[0])] + "*,"
-  quotient_string += gen_map[str(arcs[arc[-1]*-1])] + ","
-  quotient_string += gen_map[str(arc_list[-1])] + ","
-  quotient_string += gen_map[str(arcs[arc[-1]*-1])] + "* "
+  quotient_string += gen_map[str(arcs[arc[-1]*-1])]
+  l_bb = gen_map[str(arcs[arc[-1]*-1])]
+  if chirality == 1:
+    quotient_string += "*"
+    l_bb += "*"
+  quotient_string += "," + gen_map[str(arc_list[-1])] + ","
+  quotient_string += gen_map[str(arcs[arc[-1]*-1])]
+  if chirality == -1:
+    quotient_string += "*"
+  quotient_string += " "
   for i in range(len(arc_list)-1):
     arc = arc_list[i]
+    chirality = signs[-1*arc[-1]-1]
     quotient_string += gen_map[str(arc_list[i+1])] + "*,"
-    quotient_string += gen_map[str(arcs[arc[-1]*-1])] + ","
-    quotient_string += gen_map[str(arc_list[i])] + ","
-    quotient_string += gen_map[str(arcs[arc[-1]*-1])] + "* "
+    quotient_string += gen_map[str(arcs[arc[-1]*-1])]
+    char = gen_map[str(arcs[arc[-1]*-1])]
+    if chirality == 1:
+      quotient_string += "*"
+      char += "*"
+    l_bb = char + "," + l_bb
+    quotient_string += "," + gen_map[str(arc_list[i])] + ","
+    quotient_string += gen_map[str(arcs[arc[-1]*-1])]
+    if chirality == -1:
+      quotient_string += "*"
+    quotient_string += " "
+  return gen_string, quotient_string[:-1], l_bb # [:-1] because commas
 
-  bb_meridian = ""
-  for a in gauss_code.strip().split(','):
-    if int(a) < 0:
-      if int(a)*-1 in arcs:
-        bb_meridian += gen_map[str(arcs[int(a)*-1])] + ","
-      else:
-        bb_meridian += gen_map[str(arcs[int(a)])] + ","
 
-  return gen_string, quotient_string[:-1], bb_meridian[:-1]
-
+def makeL0(l_bb):
+  lList = l_bb.split(",")
+  while lList[0] != 'x1' and lList[0] != 'x1*':
+    lList = lList[1:] + lList[:1]
+  powerCount = 0
+  for generator in lList:
+    if generator[-1] == "*":
+      powerCount -= 1
+    else:
+      powerCount += 1
+  if powerCount > 0:
+    for i in range(powerCount):
+      lList.append("x1*")
+    return ",".join(lList)
+  elif powerCount < 0:
+    for i in range(powerCount*-1):
+      lList.append("x1")
+    return ",".join(lList)
+  else:
+    return ",".join(lList)
 
 def printParticlesGauss(gaussCode):
-  g, l = knot_group_from_gauss(gaussCode)
-  g, q, lBB = get_wirtinger_from_arcs(gaussCode, g, l)
+  g, l, s = knot_group_from_gauss(gaussCode)
+  g, q, lBB = get_wirtinger_from_arcs(gaussCode, g, l, s)
   quotient_list = q.split(" ")
-  particles = particleTypes(g, quotient_list, lBB, True)
+  l_0 = makeL0(lBB)
+  particles = particleTypes(g, quotient_list, l_0, True)
   printQ = ""
   for q in quotient_list:
     for el in q.split(","):
@@ -354,17 +631,18 @@ def printParticlesGauss(gaussCode):
     printQ = printQ + "="
   printQ = printQ + "1"
   #os.system('clear')
-  print("For the fundamental group")
-  print("<"+g+"|"+printQ+">,")
-  print("the particle types are:")
-  print("with meridian "+lBB)
-  print("\n")
+  string = "\tFor the fundamental group\n"
+  string += "\t<"+g+"|"+printQ+">\n"
+  string += "\twith longitude "+l_0.replace(",","")+",\n"
+  string += "\tthe particle types are:\n"
+  string += "\n"
 
   for p in particles:
-    print("__________________________________________________________________")
-    print("|"+p)
-  print("__________________________________________________________________")
-  print("\n")
+    string += "\t__________________________________________________________________\n"
+    string += "\t|"+p+"\n"
+  string += "\t__________________________________________________________________\n"
+  string += "\n"
+  return string
 
 
 def customGroupInput():
@@ -396,7 +674,7 @@ def customGroupInput():
   for q in quotient_list:
     for el in q.split(","):
       printQ = printQ + el
-    printQ = printQ + " = "
+    printQ = printQ + "="
   printQ = printQ + "1"
 
   os.system('clear')
