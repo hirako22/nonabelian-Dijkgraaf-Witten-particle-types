@@ -672,7 +672,6 @@ def printParticlesGauss(gaussCode):
   g, q = get_wirtinger_from_arcs(gaussCode, g, l, s)
   quotient_list = q.split(" ")
   l_0 = makeL0(quotient_list)
-  print("l_0: "+l_0)
   particles = particleTypes(g, quotient_list, l_0, True)
   printQ = ""
   for q in quotient_list:
