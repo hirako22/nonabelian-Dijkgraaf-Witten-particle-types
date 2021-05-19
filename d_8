@@ -598,9 +598,9 @@ def makeL0(qList):
   l_bb = []
   for i in range(len(qList)-1):
     rel = qList[i+1]
-    element = rel.split(",")[1]
+    element = rel.split(",")[-1]
     l_bb.append(element)
-  l_bb.append(qList[0].split(",")[1]) # add the last one
+  l_bb.append(qList[0].split(",")[-1]) # add the last one
   powerCount = 0
   for generator in l_bb:
     if generator[-1] == "*":
@@ -624,6 +624,7 @@ def printParticlesGauss(gaussCode):
   g, q = get_wirtinger_from_arcs(gaussCode, g, l, s)
   quotient_list = q.split(" ")
   l_0 = makeL0(quotient_list)
+  print(l_0)
   particles = particleTypes(g, quotient_list, l_0, True)
   printQ = ""
   for q in quotient_list:
