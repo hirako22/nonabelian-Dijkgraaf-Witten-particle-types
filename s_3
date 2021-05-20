@@ -477,7 +477,6 @@ def knot_group_from_gauss(gauss_code_string):
   positive_crossings_in_arc = []
   list_of_arcs = []
   i = 0
-
   # if the first number is positive
   if gauss_code[i] > 0:
     while gauss_code[i] > 0:
@@ -488,7 +487,6 @@ def knot_group_from_gauss(gauss_code_string):
     arc_subsequence.reverse()
   else:
     arc_subsequence.append(gauss_code[i])
-
   # go through sequence
   for number in gauss_code[1:]:
     arc_subsequence.append(number)
@@ -498,10 +496,9 @@ def knot_group_from_gauss(gauss_code_string):
       if len(positive_crossings_in_arc) > 0:
         for p in positive_crossings_in_arc:
           arcs[p] = arc_subsequence
-        list_of_arcs.append(arc_subsequence)
       else:
         arcs[arc_subsequence[0]] = arc_subsequence
-        list_of_arcs.append(arc_subsequence)
+      list_of_arcs.append(arc_subsequence)
       positive_crossings_in_arc = []
       arc_subsequence = [number]
   if number > 0: # If the last number is positive finish the sequence via wrap-around
@@ -513,7 +510,8 @@ def knot_group_from_gauss(gauss_code_string):
       i += 1
     for p in positive_crossings_in_arc:
       arcs[p] = arc_subsequence
-    list_of_arcs.append(arc_subsequence)
+    if list_of_arcs[0] != arc_subsequence: # in case both first and last numbers of gauss code are positive
+      list_of_arcs.append(arc_subsequence)
   return arcs, list_of_arcs, signs
 
 
@@ -543,6 +541,7 @@ def get_wirtinger_from_arcs(gauss_code, arcs, arc_list, signs):
       arc_list = arc_list[i:] + arc_list[:i]
       break # ensures we start with -1
   gen_string = ""
+  print(arc_list)
   for arc in arc_list:
     gen_map[str(arc)] = "x" + str(gen_index)
     gen_string += "x" + str(gen_index) + ","
@@ -606,6 +605,7 @@ def printParticlesGauss(gaussCode):
   g, q = get_wirtinger_from_arcs(gaussCode, g, l, s) #, lBB = get_wirtinger_from_arcs(gaussCode, g, l, s)
   quotient_list = q.split(" ")
   l_0 = makeL0(quotient_list)
+  print(l_0)
   particles = particleTypes(g, quotient_list, l_0, True)
   printQ = ""
   for q in quotient_list:
