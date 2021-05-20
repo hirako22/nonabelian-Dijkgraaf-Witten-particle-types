@@ -578,7 +578,8 @@ def knot_group_from_gauss(gauss_code_string):
       i += 1
     for p in positive_crossings_in_arc:
       arcs[p] = arc_subsequence
-    list_of_arcs.append(arc_subsequence)
+    if list_of_arcs[0] != arc_subsequence: # in case both first and last numbers of gauss code are positive
+      list_of_arcs.append(arc_subsequence)
   return arcs, list_of_arcs, signs
 
 
@@ -672,6 +673,7 @@ def printParticlesGauss(gaussCode):
   g, q = get_wirtinger_from_arcs(gaussCode, g, l, s)
   quotient_list = q.split(" ")
   l_0 = makeL0(quotient_list)
+  print("l_0: "+l_0)
   particles = particleTypes(g, quotient_list, l_0, True)
   printQ = ""
   for q in quotient_list:
