@@ -541,7 +541,6 @@ def get_wirtinger_from_arcs(gauss_code, arcs, arc_list, signs):
       arc_list = arc_list[i:] + arc_list[:i]
       break # ensures we start with -1
   gen_string = ""
-  print(arc_list)
   for arc in arc_list:
     gen_map[str(arc)] = "x" + str(gen_index)
     gen_string += "x" + str(gen_index) + ","
@@ -605,7 +604,6 @@ def printParticlesGauss(gaussCode):
   g, q = get_wirtinger_from_arcs(gaussCode, g, l, s) #, lBB = get_wirtinger_from_arcs(gaussCode, g, l, s)
   quotient_list = q.split(" ")
   l_0 = makeL0(quotient_list)
-  print(l_0)
   particles = particleTypes(g, quotient_list, l_0, True)
   printQ = ""
   for q in quotient_list:
