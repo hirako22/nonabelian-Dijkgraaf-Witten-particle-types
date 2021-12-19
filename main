@@ -19,7 +19,10 @@ The group data needed is the following:
             separated with a space, different elements must be separated with a comma
       3) "parseElement(string)" - A function that evaluates a group word string and outputs the corresponding group element
       4) "inverse" - A dictionary mapping a group element with its inverse
-      5) "findSubgroup(torus, homomorphism, centerOfTorus, particleSet)" - a function that takes in a pair, finds their centralizer subgroup
+      5) "findSubgroup(torus, homomorphism, centerOfTorus, particleSet)" - a function that takes in a pair of elements representing the
+            meridian and longitude of a torus, a code associating generators of the knot's Wirtinger presentation with elements, the pair's
+            centralizer subgroup, and a set of previously found particle types, respectively, computes the action of centralizer subgroup
+            and thus the particle type associated to this boundary torus mapping.
 See below for examples.
 
 """
