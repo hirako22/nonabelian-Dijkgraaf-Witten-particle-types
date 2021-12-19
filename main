@@ -2,9 +2,17 @@ import os
 import string
 import numpy as np
 import itertools
+import pandas as pd
+from google.colab import drive 
+drive.mount('/content/gdrive')
+
 
 """
-Given a finite gauge group with group data and a gauss code of a knot, this computes the particle types.
+Given a finite gauge group with group data and a list of gauss codes of knots, this code:
+
+      1) Generates a list of the Wirtinger presentation of the knot groups corresponding to their gauss codes
+      2) Computes particle types on knots based on a list of their Wirtinger presentations
+
 The group data needed is the following:
       1) "gaugeGroup" - A list of strings representing gauge group elements. This list MUST start with "1"
       2) "conjugacyClasses" - A string of the different conjugacy classes of the gauge group. Different conjugacy classes must be 
@@ -13,10 +21,6 @@ The group data needed is the following:
       4) "inverse" - A dictionary mapping a group element with its inverse
       5) "findSubgroup(torus, homomorphism, centerOfTorus, particleSet)" - a function that takes in a pair, finds their centralizer subgroup
 See below for examples.
-
-NOTE: this current version assumes a file that is a list of Wirtinger presentations from a list gauss codes of knots generated from
-https://knotinfo.math.indiana.edu/
-This list of Wirtinger presentations can be generated from code provided here, after the examples of input gauge group data.
 
 """
 
@@ -364,11 +368,13 @@ def algorithm_X(rows):
     allSols.append(solution)
   return allSols
 
+"""
+ taken/modified from sage.graphs.graph_coloring
+ https://github.com/sagemath/sagelib/blob/master/sage/graphs/graph.py
+ .coloring() calls .first_coloring() in graphs/graph_coloring.py
+ .first_coloring() calls .all_graph_colorings() in same file
+"""
 
-# taken/modified from sage.graphs.graph_coloring
-# https://github.com/sagemath/sagelib/blob/master/sage/graphs/graph.py
-# .coloring() calls .first_coloring() in graphs/graph_coloring.py
-# .first_coloring() calls .all_graph_colorings() in same file
 def all_graph_colorings(V,E,n):
   # V = vertices, E = edges
   if n == 0: return
@@ -393,7 +399,7 @@ def all_graph_colorings(V,E,n):
       ones.append([k+i, [nV+i]])
   colors = get_color_spread(n) # just create n distinct colors, n <= 30, if more then add something
   for i in range(len(ones)): ones[i] = ones[i][1]
-  try: #########################################################################
+  try:
     exc = algorithm_X(ones)
     for a in exc:
       coloring = {}
@@ -436,7 +442,6 @@ def recover_orientations(gauss):
     if c < a:
       a, b, c, d = c, d, a, b
     return a < c < b < d
-  #####################################################
   edges = []
   verts = list(pairings)
   numVerts = len(pairings)
@@ -451,7 +456,6 @@ def recover_orientations(gauss):
       colors = list(C.values()) # in python 2, C.values() would be a list
       break
     break
-  #####################################################
   if colors is None:  # empty graph
     positive = []
     negative = []
@@ -600,6 +604,25 @@ def get_wirtinger_from_arcs(gauss_code, arcs, arc_list, signs):
       quotient_string += "*"
     quotient_string += " "
   return gen_string, quotient_string[:-1] # [:-1] because commas
+
+#code that creates pi_1 file here
+"""
+df = pd.read_csv('gdrive/My Drive/knotinfo.csv')
+with open('gdrive/My Drive/pi_1TEST.txt', 'w') as writefile:
+  writefile.write("knot groups")
+  skip = True
+  for row in range(df.shape[0]):
+    name = df.at[row, 'Name']
+    if name == '3_1':
+      skip = False
+    if not skip:
+      code = df.at[row, 'Gauss Notation']
+      code = code.replace(';',',')[1:-1]
+      a, a_l, s = knot_group_from_gauss(code)
+      gs, qs = get_wirtinger_from_arcs(code, a, a_l, s)
+      writefile.write(name+":"+gs+"|"+qs+"\n")
+      #print(name)
+"""
 
 ############################################################################################
 
@@ -922,11 +945,7 @@ def customGroupInput():
   print("__________________________________________________________________")
   print("\n")
 
-from google.colab import drive 
-drive.mount('/content/gdrive')
 
-import pandas as pd
-df = pd.read_csv('gdrive/My Drive/knotinfo.csv')
 
 f = open('gdrive/My Drive/pi1.txt', 'r') #can be created using gauss code -> wirtinger code provided above
 lines = f.readlines()
