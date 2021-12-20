@@ -26,7 +26,7 @@ The group data needed is the following:
 See below for examples.
 
 """
-
+"""
 ############################################################################################
 
 gaugeGroup = ["1", "r", "a", "aa", "ar", "aar"]
@@ -85,7 +85,7 @@ def findSubgroup(torus, homomorphism, centerOfTorus, particleSet):
     particleSet.add("[("+torus+"), trivial]"+u'\u2295'+"[("+torus+"), w]"+u'\u2295'+"[("+torus+"), w^2]")
   return
 
-
+"""
 """
 ############################################################################################
 
@@ -163,7 +163,7 @@ def findSubgroup(torus, homomorphism, centerOfTorus, particleSet):
 
 ############################################################################################
 """
-"""
+
 ############################################################################################
 
 gaugeGroup = ["1", "a", "b", "c", "ab", "ac", "ba", "bb", "cb", "cc", "aba", "abb", "acb", "acc", "bac", "cba", "cbb", "acba", "acbb", "babb", "abac", "cbac", "ababb", "acbac"]
@@ -288,7 +288,7 @@ def findSubgroup(torus, homomorphism, centerOfTorus, particleSet):
       +u'\u2295'+"[("+torus+"), w^3]")
   return
 
-"""
+
 
 ############################################################################################
 
@@ -612,7 +612,7 @@ def get_wirtinger_from_arcs(gauss_code, arcs, arc_list, signs):
 """
 df = pd.read_csv('gdrive/My Drive/knotinfo.csv')
 with open('gdrive/My Drive/pi_1TEST.txt', 'w') as writefile:
-  writefile.write("knot groups")
+  writefile.write("knot groups\n")
   skip = True
   for row in range(df.shape[0]):
     name = df.at[row, 'Name']
@@ -624,7 +624,7 @@ with open('gdrive/My Drive/pi_1TEST.txt', 'w') as writefile:
       a, a_l, s = knot_group_from_gauss(code)
       gs, qs = get_wirtinger_from_arcs(code, a, a_l, s)
       writefile.write(name+":"+gs+"|"+qs+"\n")
-      #print(name)
+      print(name)
 """
 
 ############################################################################################
@@ -801,8 +801,8 @@ def computeLongitude(gens, code_list, l):
 def computeCenter(m, l):
   commuters = ["1"]
   for element in gaugeGroup[1:]:
-    conjugate_m = parseElement(element + m + inverse[element])
-    conjugate_l = parseElement(element + l + inverse[element])
+    conjugate_m = parseElement(conjugate(m, element))
+    conjugate_l = parseElement(conjugate(l, element))
     if conjugate_m == m and conjugate_l == l:
       commuters.append(element)
   return commuters
@@ -950,7 +950,7 @@ def customGroupInput():
 
 
 
-f = open('gdrive/My Drive/pi1.txt', 'r') #can be created using gauss code -> wirtinger code provided above
+f = open('gdrive/My Drive/pi_1TEST.txt', 'r') #can be created using gauss code -> wirtinger code provided above
 lines = f.readlines()
 f.close()
 with open('gdrive/My Drive/s_3TEST.txt', 'w') as writefile:
