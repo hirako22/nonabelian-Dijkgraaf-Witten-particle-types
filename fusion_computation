@@ -1,0 +1,79 @@
+def findMultiplicity(particlePair, fusingTuple, fusedIrrep):
+  toriIrrep1, toriIrrep2 = fusingTuple
+  irrepDimZ1, irrepDimZ2 = toriIrrep1["1"].shape[0], toriIrrep2["1"].shape[0]
+  fusedDimZ = fusedIrrep["1"].shape[0]
+
+  toriSet = {particlePair[0]+","+particlePair[1]}
+  for g in gaugeGroup:
+    toriSet.add(parseElement(conjugate(particlePair[0],g))+","+parseElement(conjugate(particlePair[1],g)))
+  tori = list(toriSet)
+
+  mCClass = [particlePair[0]]
+  lCClass = [particlePair[1]]
+  ms = {particlePair[0]}
+  ls = {particlePair[1]}
+  for element in gaugeGroup:
+    conjugatedM = parseElement(conjugate(particlePair[0], element))
+    conjugatedL = parseElement(conjugate(particlePair[1], element))
+    if conjugatedM not in mCClass or conjugatedL not in lCClass:
+      mCClass.append(conjugatedM)
+      lCClass.append(conjugatedL)
+      ms.add(conjugatedM)
+      ls.add(conjugatedL)
+  mNoDuplicates = list(ms)
+  lNoDuplicates = list(ls)
+
+  q_i = ["1"]
+  for i in range(1,len(mCClass)):
+    gCounter = 1
+    while gCounter < len(gaugeGroup):
+      g = gaugeGroup[gCounter]
+      if parseElement(conjugate(mCClass[i],g)) == particlePair[0] and parseElement(conjugate(lCClass[i],g)) == particlePair[1]:
+        q_i.append(g)
+        gCounter = len(gaugeGroup)
+      gCounter += 1
+
+  fusionSum = 0+0j
+  for torusString in tori:
+    torus = torusString.split(",")
+    irrepDimension1 = len(lNoDuplicates)*len(mNoDuplicates)*irrepDimZ1
+    irrepDimension2 = len(lNoDuplicates)*len(mNoDuplicates)*irrepDimZ2
+    irrepFusedDimension = len(lNoDuplicates)*len(mNoDuplicates)*fusedDimZ
+
+    for g in gaugeGroup:
+      irrep1 = np.zeros((irrepDimension1, irrepDimension1))
+      irrep2 = np.zeros((irrepDimension2, irrepDimension2))
+      #fused particle
+      irrepFused = np.zeros((irrepFusedDimension, irrepFusedDimension))
+      for i in range(0,len(mCClass)):
+        for j in range(0,len(mCClass)):
+          if torus[0]==mCClass[i] and torus[1]==lCClass[i] and conjugate(torus[0],g)==mCClass[j] and conjugate(torus[1],g)==lCClass[j]:
+            irrep1[i*irrepDimZ1:(i+1)*irrepDimZ1,j*irrepDimZ1:(j+1)*irrepDimZ1] = toriIrrep1[parseElement(q_i[i]+inverse[g]+inverse[q_i[j]])]
+            irrep2[i*irrepDimZ2:(i+1)*irrepDimZ2,j*irrepDimZ2:(j+1)*irrepDimZ2] = toriIrrep2[parseElement(q_i[i]+inverse[g]+inverse[q_i[j]])]
+            #fused particle
+            irrepFused[i*fusedDimZ:(i+1)*fusedDimZ,j*fusedDimZ:(j+1)*fusedDimZ] = fusedIrrep[parseElement(q_i[i]+inverse[g]+inverse[q_i[j]])]
+          else:
+            irrep1[i*irrepDimZ1:(i+1)*irrepDimZ1,j*irrepDimZ1:(j+1)*irrepDimZ1] = np.zeros((irrepDimZ1, irrepDimZ1))
+            irrep2[i*irrepDimZ2:(i+1)*irrepDimZ2,j*irrepDimZ2:(j+1)*irrepDimZ2] = np.zeros((irrepDimZ2, irrepDimZ2))
+            #fused particle
+            irrepFused[i*fusedDimZ:(i+1)*fusedDimZ,j*fusedDimZ:(j+1)*fusedDimZ] = np.zeros((fusedDimZ, fusedDimZ))
+      trace1, trace2 = np.trace(irrep1), np.trace(irrep2)
+      fusedTrace = np.trace(irrepFused)
+      # u'\u2297'
+      #print("\u03C7(|("+torusString+"),"+g+">): "+str(trace1)+", "+str(trace2)+"; "+str(fusedTrace))
+      fusionSum += np.conjugate(trace1*trace2)*fusedTrace
+  fusionSum /= len(gaugeGroup)
+  print("Multiplicity of fusedIrrep: "+str(np.absolute(fusionSum)))
+
+
+
+###################################################
+# Here you input the torus pair and irreps of     #
+# the centralizers you'd like to fuse as a tuple  #
+# "toriIrrep1" and "toriIrrep2." Then you input   #
+# the irrep of the centralizer for the particle   #
+# you'd like to find the multiplicity of in       #
+# said fusion.                                    #
+###################################################
+
+findMultiplicity(["c", "cc"], (irrepZ4, irrepZ4), irrepZ4)
