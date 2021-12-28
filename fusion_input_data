@@ -1,0 +1,269 @@
+import numpy as np
+
+"""
+Given a particle type (data needed: gauge group G, a parsing function to simplify words, an
+inverse map, meridian and longitude pair image in BG, and an irreducible representation of their
+centralizer) this computes the matrix representations of the particle's tube algebra restricted
+to the pair's conjugacy class. The basis of the vector space over which this printed as well.
+
+See below for details.
+"""
+
+"""
+gaugeGroup = ["1", "r", "a", "aa", "ar", "aar"]
+
+conjugacyClasses = "1 r,ar,aar a,aa"
+
+# determines the element of any combination of a and r
+def parseElement(s3_string):
+  permuted = [1, 2, 3]
+  for letter in reversed(s3_string):
+    if letter == 'a':
+      permuted = [permuted[2], permuted[0], permuted[1]]
+    elif letter == 'r':
+      permuted = [permuted[1], permuted[0], permuted[2]]
+    elif letter == '1':
+      pass
+    else:
+      print("Invalid S_3 element: "+str(letter))
+      break
+  if permuted == [1, 2, 3]:
+    return "1"
+  elif permuted == [2, 1, 3]:
+    return "r"
+  elif permuted == [3, 1, 2]:
+    return "a"
+  elif permuted == [3, 2, 1]:
+    return "ar"
+  elif permuted == [2, 3, 1]:
+    return "aa"
+  else:
+    return "aar"
+
+# given an element of s_3 as a string, returns string of its inverse
+inverse = {
+    "1": "1",
+    "r": "r",
+    "a": "aa",
+    "aa": "a",
+    "ar": "ar",
+    "aar": "aar"
+}
+
+irrepTriv = {"1":np.ones(1), "r":np.ones(1), "a":np.ones(1), "aa":np.ones(1),
+          "ar":np.ones(1), "aar":np.ones(1)}
+irrepSign = {"1":np.ones(1), "r":np.ones(1)*-1, "a":np.ones(1), "aa":np.ones(1),
+          "ar":np.ones(1)*-1, "aar":np.ones(1)*-1}
+"""
+###############################################################################
+"""
+gaugeGroup = ["1", "r", "a", "aa", "aaa", "ra", "raa", "raaa"]
+
+conjugacyClasses = "1 r,raa a,aaa aa ra,raaa"
+
+def parseElement(d8_string):
+  permuted = [1, 2, 3, 4]
+  for letter in reversed(d8_string):
+    if letter == 'a':
+      permuted = [permuted[3], permuted[0], permuted[1], permuted[2]]
+    elif letter == 'r':
+      permuted = [permuted[1], permuted[0], permuted[3], permuted[2]]
+    elif letter == '1':
+      pass
+    else:
+      print("Invalid D_8 element: "+str(letter))
+      break
+  if permuted == [1, 2, 3, 4]:
+    return "1"
+  elif permuted == [2, 1, 4, 3]:
+    return "r"
+  elif permuted == [4, 1, 2, 3]:
+    return "a"
+  elif permuted == [3, 4, 1, 2]:
+    return "aa"
+  elif permuted == [2, 3, 4, 1]:
+    return "aaa"
+  elif permuted == [1, 4, 3, 2]:
+    return "ra"
+  elif permuted == [4, 3, 2, 1]:
+    return "raa"
+  else:
+    return "raaa"
+
+inverse = {
+    "1": "1",
+    "r": "r",
+    "a": "aaa",
+    "aa": "aa",
+    "aaa": "a",
+    "ra": "ra",
+    "raa": "raa",
+    "raaa": "raaa"
+}
+
+irrepTriv = {"1":np.ones(1), "r":np.ones(1), "a":np.ones(1), "aa":np.ones(1),
+          "aaa":np.ones(1), "ra":np.ones(1), "raa":np.ones(1), "raaa":np.ones(1)}
+
+"""
+###############################################################################
+
+gaugeGroup = ["1", "a", "b", "c", "ab", "ac", "ba", "bb", "cb", "cc", "aba", "abb", "acb", "acc", "bac", "cba", "cbb", "acba", "acbb", "babb", "abac", "cbac", "ababb", "acbac"]
+
+conjugacyClasses = "1 a,babb,cb,abac,acba,cbac b,aba,bac,ababb,acb,cba,ac,bb c,abb,acc,cbb,ba,ab cc,acbb,acbac"
+
+def parseElement(s4_string):
+  permuted = [1, 2, 3, 4]
+  for letter in reversed(s4_string):
+    if letter == 'a':
+      permuted = [permuted[0], permuted[1], permuted[3], permuted[2]]
+    elif letter == 'b':
+      permuted = [permuted[1], permuted[2], permuted[0], permuted[3]]
+    elif letter == 'c':
+      permuted = [permuted[3], permuted[0], permuted[1], permuted[2]]
+    elif letter == '1':
+      pass
+    else:
+      print("Invalid S_4 element: "+str(letter))
+      break
+  if permuted == [1, 2, 3, 4]:
+    return "1"
+  elif permuted == [1, 2, 4, 3]:
+    return "a"
+  elif permuted == [1, 3, 2, 4]:
+    return "abac"
+  elif permuted == [1, 3, 4, 2]:
+    return "bac"
+  elif permuted == [1, 4, 2, 3]:
+    return "ababb"
+  elif permuted == [1, 4, 3, 2]:
+    return "babb"
+  elif permuted == [2, 1, 4, 3]:
+    return "acbac"
+  elif permuted == [2, 1, 3, 4]:
+    return "cbac"
+  elif permuted == [2, 3, 1, 4]:
+    return "b"
+  elif permuted == [2, 3, 4, 1]:
+    return "ab"
+  elif permuted == [2, 4, 1, 3]:
+    return "ba"
+  elif permuted == [2, 4, 3, 1]:
+    return "aba"
+  elif permuted == [3, 1, 2, 4]:
+    return "bb"
+  elif permuted == [3, 1, 4, 2]:
+    return "abb"
+  elif permuted == [3, 2, 1, 4]:
+    return "acba"
+  elif permuted == [3, 2, 4, 1]:
+    return "cba"
+  elif permuted == [3, 4, 1, 2]:
+    return "cc"
+  elif permuted == [3, 4, 2, 1]:
+    return "acc"
+  elif permuted == [4, 1, 2, 3]:
+    return "c"
+  elif permuted == [4, 1, 3, 2]:
+    return "ac"
+  elif permuted == [4, 2, 1, 3]:
+    return "acb"
+  elif permuted == [4, 2, 3, 1]:
+    return "cb"
+  elif permuted == [4, 3, 1, 2]:
+    return "cbb"
+  else: # permuted == [4, 3, 2, 1]:
+    return "acbb"
+
+inverse = {
+    "1": "1",
+    "a": "a", #(34)
+    "b": "bb",
+    "bb": "b",
+    "c": "ab",
+    "ab": "c",
+    "ac": "aba",
+    "aba": "ac",
+    "ba": "abb",
+    "abb": "ba",
+    "cb": "cb", #(14)
+    "cc": "cc",
+    "acb": "cba",
+    "cba": "acb",
+    "acc": "cbb",
+    "cbb": "acc",
+    "bac": "ababb",
+    "ababb": "bac",
+    "acba": "acba", #(13)
+    "acbb": "acbb",
+    "babb": "babb", #(24)
+    "abac": "abac", #(23)
+    "cbac": "cbac", #(12)
+    "acbac": "acbac"
+}
+
+irrepTriv = {"1":np.ones(1), "a":np.ones(1), "b":np.ones(1),"bb":np.ones(1),
+          "c":np.ones(1), "ab":np.ones(1), "ac":np.ones(1), "aba":np.ones(1),
+          "ba":np.ones(1), "abb":np.ones(1), "cb":np.ones(1), "cc":np.ones(1),
+          "acb":np.ones(1), "cba":np.ones(1), "acc":np.ones(1), "cbb":np.ones(1),
+          "bac":np.ones(1), "ababb":np.ones(1), "acba":np.ones(1), "acbb":np.ones(1),
+          "babb":np.ones(1), "abac":np.ones(1), "cbac":np.ones(1), "acbac":np.ones(1)
+          }
+irrepSign = {"1":np.ones(1), "a":-1*np.ones(1), "b":np.ones(1),"bb":np.ones(1),
+          "c":np.ones(1), "ab":np.ones(1), "ac":np.ones(1), "aba":np.ones(1),
+          "ba":np.ones(1), "abb":np.ones(1), "cb":-1*np.ones(1), "cc":np.ones(1),
+          "acb":np.ones(1), "cba":np.ones(1), "acc":np.ones(1), "cbb":np.ones(1),
+          "bac":np.ones(1), "ababb":np.ones(1), "acba":-1*np.ones(1), "acbb":np.ones(1),
+          "babb":-1*np.ones(1), "abac":-1*np.ones(1), "cbac":-1*np.ones(1), "acbac":np.ones(1)}
+
+w = np.e**(2j*np.pi/3)
+irrepZ3 = {"1":np.ones(1), "a":np.ones(1), "b":w*np.ones(1),"bb":w*np.ones(1),
+          "c":np.ones(1), "ab":np.ones(1), "ac":w*np.ones(1), "aba":w*np.ones(1),
+          "ba":np.ones(1), "abb":np.ones(1), "cb":np.ones(1), "cc":np.ones(1),
+          "acb":w*np.ones(1), "cba":w*np.ones(1), "acc":np.ones(1), "cbb":np.ones(1),
+          "bac":w*np.ones(1), "ababb":w*np.ones(1), "acba":np.ones(1), "acbb":np.ones(1),
+          "babb":np.ones(1), "abac":np.ones(1), "cbac":np.ones(1), "acbac":np.ones(1)}
+
+u = np.e**(2j*np.pi/4)
+irrepZ4 = {"1":np.ones(1), "a":-1*np.ones(1), "b":np.ones(1),"bb":np.ones(1),
+          "c":np.ones(1), "ab":np.ones(1), "ac":np.ones(1), "aba":np.ones(1),
+          "ba":np.ones(1), "abb":np.ones(1), "cb":-1*np.ones(1), "cc":u*np.ones(1),
+          "acb":np.ones(1), "cba":np.ones(1), "acc":np.ones(1), "cbb":np.ones(1),
+          "bac":np.ones(1), "ababb":np.ones(1), "acba":-1*np.ones(1), "acbb":u*np.ones(1),
+          "babb":-1*np.ones(1), "abac":-1*np.ones(1), "cbac":-1*np.ones(1), "acbac":u*np.ones(1)}
+
+# a   babb  cb    abac  acba  cbac
+#(34) (24)  (14)  (23)  (13)  (12)
+
+#There are 3 different Klein subgoups of S_4: ((12),(34)), ((13),(24)), and ((14),(23)). We'll label
+#them Klein1, Klein2, and Klein3, respectively.
+
+irrepKlein1 = {"1":np.ones(1), "a":-1*np.ones(1), "b":np.ones(1),"bb":np.ones(1),
+          "c":np.ones(1), "ab":np.ones(1), "ac":np.ones(1), "aba":np.ones(1),
+          "ba":np.ones(1), "abb":np.ones(1), "cb":np.ones(1), "cc":np.ones(1),
+          "acb":np.ones(1), "cba":np.ones(1), "acc":np.ones(1), "cbb":np.ones(1),
+          "bac":np.ones(1), "ababb":np.ones(1), "acba":np.ones(1), "acbb":np.ones(1),
+          "babb":np.ones(1), "abac":np.ones(1), "cbac":-1*np.ones(1), "acbac":np.ones(1)
+          }
+irrepKlein2 = {"1":np.ones(1), "a":np.ones(1), "b":np.ones(1),"bb":np.ones(1),
+          "c":np.ones(1), "ab":np.ones(1), "ac":np.ones(1), "aba":np.ones(1),
+          "ba":np.ones(1), "abb":np.ones(1), "cb":np.ones(1), "cc":np.ones(1),
+          "acb":np.ones(1), "cba":np.ones(1), "acc":np.ones(1), "cbb":np.ones(1),
+          "bac":np.ones(1), "ababb":np.ones(1), "acba":-1*np.ones(1), "acbb":np.ones(1),
+          "babb":np.ones(1), "abac":np.ones(1), "cbac":np.ones(1), "acbac":np.ones(1)
+          }
+irrepKlein3 = {"1":np.ones(1), "a":np.ones(1), "b":np.ones(1),"bb":np.ones(1),
+          "c":np.ones(1), "ab":np.ones(1), "ac":np.ones(1), "aba":np.ones(1),
+          "ba":np.ones(1), "abb":np.ones(1), "cb":np.ones(1), "cc":np.ones(1),
+          "acb":np.ones(1), "cba":np.ones(1), "acc":np.ones(1), "cbb":np.ones(1),
+          "bac":np.ones(1), "ababb":np.ones(1), "acba":np.ones(1), "acbb":np.ones(1),
+          "babb":np.ones(1), "abac":np.ones(1), "cbac":np.ones(1), "acbac":np.ones(1)
+          }
+
+###############################################################################
+
+def conjugate(word, el):
+  word_list = word.split(",")
+  conjugated = []
+  for c in word_list:
+    conjugated.append(parseElement(el + c + inverse[el])) # ghg^{-1}
+  return ",".join(conjugated)
